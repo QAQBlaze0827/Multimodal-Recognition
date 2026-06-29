@@ -14,6 +14,8 @@
   - 其他 → CPUExecutionProvider
 - 相依清理：移除 faster-whisper、RPi 需求移除 mediapipe
 - WSL 腳本：setup_wsl.sh、run_vision.sh、run_smoke_test.sh
+- 訓練腳本全數完成：download_fer2013.py、download_audio_datasets.py、train_video_mini_xception.py、train_audio_tiny_cnn.py
+- 環境建置：.venv（Python 3.11），訓練/執行依賴已安裝
 
 ## 專案結構
 ```
@@ -41,6 +43,9 @@ Multimodal-Recognition/
 ├── models/                        # ONNX 模型放這裡（.gitkeep）
 ├── scripts/                       # 訓練 + 環境初始化腳本
 │   ├── train_video_mini_xception.py  # TensorFlow 訓練視覺模型
+│   ├── train_audio_tiny_cnn.py       # TensorFlow 訓練音訊模型
+│   ├── download_fer2013.py           # 下載 FER2013 資料集
+│   ├── download_audio_datasets.py    # 下載音訊資料集
 │   ├── setup_windows.ps1
 │   ├── setup_wsl.sh
 │   ├── run_vision.sh / .ps1
@@ -56,15 +61,13 @@ Multimodal-Recognition/
 ## 目前限制
 - 尚無真實 ONNX 模型（mini_xception_int8.onnx、tiny_cnn_audio_int8.onnx）
 - 無訓練資料集（FER2013、RAVDESS 等）
-- 無音訊模型訓練腳本（需寫 train_audio_tiny_cnn.py）
 - 所有 emotion 推論目前走 heuristic fallback（僅供開發測試，不具備真實情緒辨識能力）
 
 ## 待辦事項
-- [ ] 下載 FER2013 資料集到 data/datasets/fer/（需寫 download_fer2013.py）
+- [ ] 下載 FER2013 資料集到 data/datasets/fer：python scripts/download_fer2013.py
 - [ ] 訓練 mini_xception_int8.onnx：python scripts/train_video_mini_xception.py --data-dir data/datasets/fer
-- [ ] 撰寫 scripts/train_audio_tiny_cnn.py（Tiny 1D-CNN + int8 量化）
-- [ ] 下載音訊資料集（RAVDESS、CREMA-D、TESS）
-- [ ] 訓練 tiny_cnn_audio_int8.onnx
+- [ ] 下載音訊資料集（RAVDESS、CREMA-D、TESS）：python scripts/download_audio_datasets.py
+- [ ] 訓練 tiny_cnn_audio_int8.onnx：python scripts/train_audio_tiny_cnn.py --data-dir data/datasets/audio
 - [ ] 驗證：python app.py --vision-only --no-display --max-frames 10
 
 ## WSL 開發環境
@@ -81,3 +84,11 @@ npm install -g opencode-ai
 source .venv/bin/activate
 python app.py --vision-only --no-display --max-frames 10
 ```
+
+## 環境狀態（2025-06-29）
+- Python 3.11.15 + .venv（位於專案根目錄）
+- 訓練依賴已安裝（tensorflow 2.16.2、tf2onnx 1.16.1、onnxruntime 1.17.3）
+- 執行依賴已安裝（opencv 4.11.0、mediapipe 0.10.14、sounddevice 0.4.6）
+- ⚠️ sounddevice 需要 `libportaudio2` 系統套件：`sudo apt-get install -y libportaudio2`
+- ⚠️ TensorFlow 以 CPU 模式執行（WSL 內無 CUDA 驅動）
+- ⚠️ protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
