@@ -59,16 +59,19 @@ Multimodal-Recognition/
 ```
 
 ## 目前限制
-- 尚無真實 ONNX 模型（mini_xception_int8.onnx、tiny_cnn_audio_int8.onnx）
-- 無訓練資料集（FER2013、RAVDESS 等）
-- 所有 emotion 推論目前走 heuristic fallback（僅供開發測試，不具備真實情緒辨識能力）
+- ⚠️ int8 量化模型 ConvInteger 不支援 CPU（dynamic quantization 限制）
+  - config.yaml 已改指向 FP32 模型，可正常推論
+- 音訊僅有 RAVDESS 資料集（CREMA-D/TESS 下載 URL 失效）
+- WSL 無 webcam，`app.py` 無法在本機執行（需實體機或 Windows）
+- protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
 
 ## 待辦事項
-- [ ] 下載 FER2013 資料集到 data/datasets/fer：python scripts/download_fer2013.py
-- [ ] 訓練 mini_xception_int8.onnx：python scripts/train_video_mini_xception.py --data-dir data/datasets/fer
-- [ ] 下載音訊資料集（RAVDESS、CREMA-D、TESS）：python scripts/download_audio_datasets.py
-- [ ] 訓練 tiny_cnn_audio_int8.onnx：python scripts/train_audio_tiny_cnn.py --data-dir data/datasets/audio
-- [ ] 驗證：python app.py --vision-only --no-display --max-frames 10
+- [x] 下載 FER2013 資料集到 data/datasets/fer
+- [x] 訓練 mini_xception_fp32.onnx（int8 版本因 ConvInteger 限制改用 FP32）
+- [x] 下載 RAVDESS 音訊資料集
+- [x] 訓練 tiny_cnn_audio_fp32.onnx（int8 版本因 ConvInteger 限制改用 FP32）
+- [x] 驗證：模型載入 + dummy 推論通過
+- [ ] 找 CREMA-D/TESS 替代下載來源（目前 URL 404）
 
 ## WSL 開發環境
 ```bash

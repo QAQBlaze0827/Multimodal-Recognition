@@ -70,7 +70,7 @@ def load_audio_files(data_dir: Path) -> list[tuple[np.ndarray, int]]:
 def make_dataset(
     tf, samples_list: list[tuple[np.ndarray, int]], batch_size: int, shuffle: bool
 ):
-    import tensorflow as tf as tf_module
+    import tensorflow as tf_module
 
     X, y = [], []
     for audio, label_idx in samples_list:
