@@ -16,6 +16,9 @@
 - WSL 腳本：setup_wsl.sh、run_vision.sh、run_smoke_test.sh
 - 訓練腳本全數完成：download_fer2013.py、download_audio_datasets.py、train_video_mini_xception.py、train_audio_tiny_cnn.py
 - 環境建置：.venv（Python 3.11），訓練/執行依賴已安裝
+- FER2013 資料集下載 + 訓練：mini_xception_fp32.onnx（28,709 張圖片，30 epochs）
+- RAVDESS 音訊資料集下載 + 訓練：tiny_cnn_audio_fp32.onnx（1,440 個音檔，50 epochs）
+- 驗證通過：模型載入 + dummy inference 正常
 
 ## 專案結構
 ```
@@ -46,6 +49,9 @@ Multimodal-Recognition/
 │   ├── train_audio_tiny_cnn.py       # TensorFlow 訓練音訊模型
 │   ├── download_fer2013.py           # 下載 FER2013 資料集
 │   ├── download_audio_datasets.py    # 下載音訊資料集
+│   ├── run_train_vision.sh           # WSL 背景執行視覺訓練
+│   ├── run_train_audio.sh            # WSL 背景執行音訊訓練
+│   ├── run_download_audio.sh         # WSL 背景執行音訊下載
 │   ├── setup_windows.ps1
 │   ├── setup_wsl.sh
 │   ├── run_vision.sh / .ps1
@@ -64,6 +70,8 @@ Multimodal-Recognition/
 - 音訊僅有 RAVDESS 資料集（CREMA-D/TESS 下載 URL 失效）
 - WSL 無 webcam，`app.py` 無法在本機執行（需實體機或 Windows）
 - protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
+- ⚠️ soundfile 不在 requirements_train.txt 中，訓練音訊時需手動安裝：`pip install soundfile`
+- ⚠️ `train_audio_tiny_cnn.py` 曾有 `import tensorflow as tf as tf_module` bug（已修）
 
 ## 待辦事項
 - [x] 下載 FER2013 資料集到 data/datasets/fer
@@ -72,6 +80,9 @@ Multimodal-Recognition/
 - [x] 訓練 tiny_cnn_audio_fp32.onnx（int8 版本因 ConvInteger 限制改用 FP32）
 - [x] 驗證：模型載入 + dummy 推論通過
 - [ ] 找 CREMA-D/TESS 替代下載來源（目前 URL 404）
+  - TESS 替代：`https://bj.bcebos.com/paddleaudio/datasets/TESS_Toronto_emotional_speech_set.zip`
+  - CREMA-D 替代：Hugging Face `razahtet/crema-d-audio`（需 `huggingface_hub`）
+- [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
 
 ## WSL 開發環境
 ```bash
@@ -86,6 +97,16 @@ npm install -g opencode-ai
 # 啟動
 source .venv/bin/activate
 python app.py --vision-only --no-display --max-frames 10
+```
+
+## Windows 開發環境
+```powershell
+# 第一次：安裝依賴
+.\scripts\setup_windows.ps1
+
+# 每次執行
+.\.venv\Scripts\Activate.ps1
+python app.py --vision-only
 ```
 
 ## 環境狀態（2025-06-29）
