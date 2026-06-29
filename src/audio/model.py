@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.shared_types import EMOTIONS, make_result
+from src.shared_types import EMOTIONS, create_ort_session, make_result
 
 
 class AudioEmotionModel:
@@ -35,19 +35,10 @@ class AudioEmotionModel:
     def _try_load_onnx(self) -> None:
         if not self.model_path.exists():
             return
-        try:
-            import onnxruntime as ort
-
-            options = ort.SessionOptions()
-            options.intra_op_num_threads = 2
-            options.inter_op_num_threads = 1
-            options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-            self.session = ort.InferenceSession(
-                str(self.model_path),
-                sess_options=options,
-                providers=["CPUExecutionProvider"],
-            )
-            self.input_name = self.session.get_inputs()[0].name
+        session, input_name = create_ort_session(str(self.model_path))
+        if session is not None:
+            self.session = session
+            self.input_name = input_name
             self.backend = "onnx"
-        except Exception as exc:
-            print(f"[audio] ONNX model load failed, fallback to heuristic: {exc}")
+        else:
+            print(f"[audio] ONNX model load failed, fallback to heuristic")
