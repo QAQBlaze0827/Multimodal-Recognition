@@ -1,0 +1,54 @@
+system:
+  mode: "local"
+  log_level: "INFO"
+
+video:
+  camera_id: 0
+  width: 320
+  height: 240
+  fps_target: 15
+  frame_skip: 2
+  face_detection:
+    backend: "auto"
+    min_detection_confidence: 0.7
+    model_selection: 0
+  model:
+    path: "models/mini_xception_int8.onnx"
+    input_size: 48
+    input_channels: 1
+
+audio:
+  enabled: true
+  sample_rate: 16000
+  chunk_size: 256
+  device_id: -1
+  window_seconds: 1.5
+  mfcc:
+    n_mfcc: 13
+    n_fft: 512
+    hop_length: 256
+  model:
+    path: "models/tiny_cnn_audio_int8.onnx"
+
+fusion:
+  method: "confidence_weighted"
+  fallback_emotion: "neutral"
+  min_confidence: 0.3
+
+output:
+  display:
+    show_video: true
+    show_audio: true
+    show_fused: true
+    show_fps: true
+    show_temp: true
+  csv_log:
+    enabled: true
+    path: "data/logs/session_{timestamp}.csv"
+
+thermal:
+  check_interval: 5
+  thresholds:
+    cautious: 65
+    eco: 75
+    critical: 85

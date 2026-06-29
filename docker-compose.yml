@@ -1,0 +1,27 @@
+services:
+  multimodal-emotion:
+    build: .
+    image: multimodal-emotion:py311
+    working_dir: /app
+    environment:
+      - MPLCONFIGDIR=/app/.cache/matplotlib
+      - HF_HOME=/app/.cache/huggingface
+    volumes:
+      - ./.cache:/app/.cache
+    command: ["python", "app.py", "--vision-only", "--no-display"]
+
+  multimodal-emotion-linux-camera:
+    build: .
+    image: multimodal-emotion:py311
+    working_dir: /app
+    environment:
+      - DISPLAY=${DISPLAY}
+      - MPLCONFIGDIR=/app/.cache/matplotlib
+      - HF_HOME=/app/.cache/huggingface
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./.cache:/app/.cache
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/snd:/dev/snd
+    command: ["python", "app.py", "--vision-only"]
