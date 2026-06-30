@@ -16,7 +16,7 @@ CREMA_D_URL = (
     "https://github.com/CheyneyComputerScience/CREMA-D/raw/master/Audio%20WAV%20Files.zip"
 )
 TESS_URL = (
-    "https://www.kaggle.com/api/v1/datasets/ejlok1/toronto-emotional-speech-set-tess/download"
+    "https://bj.bcebos.com/paddleaudio/datasets/TESS_Toronto_emotional_speech_set.zip"
 )
 
 EMOTION_MAP = {
@@ -30,13 +30,14 @@ EMOTION_MAP = {
     "calm": "neutral",
     "pleasant_surprise": "surprise",
     "pleasant_surprised": "surprise",
+    "ps": "surprise",
 }
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Download audio emotion datasets.")
     parser.add_argument("--output", default="data/datasets/audio")
-    parser.add_argument("--datasets", nargs="+", default=["ravdess", "crema-d", "tess"],
+    parser.add_argument("--datasets", nargs="+", default=["ravdess", "tess"],
                         choices=["ravdess", "crema-d", "tess"])
     return parser
 
@@ -94,36 +95,42 @@ def extract_ravdess(zip_path: Path, output_dir: Path) -> None:
     print(f"[ravdess] Extracted {count} files")
 
 
-def extract_cremad(zip_path: Path, output_dir: Path) -> None:
+def download_cremad(output_dir: Path) -> None:
     output_dir = output_dir / "crema_d"
-    extract_dir = output_dir / "_extracted"
-    extract_dir.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        print(f"[crema-d] Already exists, skipping")
+        return
 
-    with zipfile.ZipFile(zip_path) as zf:
-        zf.extractall(extract_dir)
+    try:
+        from datasets import load_dataset
+        import soundfile as sf
+        import numpy as np
+    except ImportError as exc:
+        print(f"[crema-d] Cannot download: {exc}")
+        print("  Run: pip install datasets soundfile")
+        return
 
+    print("[crema-d] Loading from Hugging Face (razahtet/crema-d-audio) ...")
+    ds = load_dataset("razahtet/crema-d-audio", split="train", trust_remote_code=True)
+
+    label_map = {0: "anger", 1: "disgust", 2: "fear", 3: "happy", 4: "neutral", 5: "sad"}
     count = 0
-    for wav in extract_dir.rglob("*.wav"):
-        parts = wav.stem.split("_")
-        if len(parts) < 3:
-            continue
-        raw_emotion = parts[2].lower()
-        cremad_map = {
-            "ang": "angry", "dis": "disgust", "fea": "fear",
-            "hap": "happy", "neu": "neutral", "sad": "sad",
-        }
-        label = cremad_map.get(raw_emotion)
-        if label is None:
-            continue
-        mapped = EMOTION_MAP.get(label)
-        if mapped is None:
-            continue
-        dest_dir = output_dir / mapped
+    for i, item in enumerate(ds):
+        label = label_map[item["label"]]
+        audio = item["audio"]
+        array = np.asarray(audio["array"], dtype=np.float32)
+        sr = audio["sampling_rate"]
+
+        dest_dir = output_dir / label
         dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(wav, dest_dir / wav.name)
+
+        filename = f"cremad_{i:05d}.wav"
+        sf.write(str(dest_dir / filename), array, sr)
         count += 1
 
-    shutil.rmtree(extract_dir)
+        if count % 2000 == 0:
+            print(f"[crema-d] Progress: {count}/7442")
+
     print(f"[crema-d] Extracted {count} files")
 
 
@@ -135,15 +142,20 @@ def extract_tess(zip_path: Path, output_dir: Path) -> None:
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(extract_dir)
 
+    tess_map = {
+        "angry": "angry", "disgust": "disgust", "fear": "fear",
+        "happy": "happy", "neutral": "neutral", "ps": "ps",
+        "sad": "sad",
+    }
+
     count = 0
     for wav in extract_dir.rglob("*.wav"):
-        folder = wav.parent.name.lower()
-        tess_map = {
-            "neutral": "neutral", "happy": "happy", "sad": "sad",
-            "angry": "angry", "fear": "fear", "surprise": "surprise",
-            "disgust": "disgust", "pleasant_surprise": "surprise",
-        }
-        label = tess_map.get(folder)
+        basename = wav.stem
+        parts = basename.split("_")
+        if len(parts) < 2:
+            continue
+        raw_emotion = parts[1].lower()
+        label = tess_map.get(raw_emotion)
         if label is None:
             continue
         mapped = EMOTION_MAP.get(label)
@@ -171,9 +183,7 @@ def main() -> None:
         extract_ravdess(zip_path, output_dir)
 
     if "crema-d" in datasets:
-        zip_path = output_dir / "crema_d.zip"
-        _download(CREMA_D_URL, zip_path, desc="CREMA-D")
-        extract_cremad(zip_path, output_dir)
+        download_cremad(output_dir)
 
     if "tess" in datasets:
         zip_path = output_dir / "tess.zip"
