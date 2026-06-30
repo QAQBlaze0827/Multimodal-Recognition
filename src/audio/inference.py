@@ -44,6 +44,7 @@ class AudioEmotionThread(threading.Thread):
                 n_mfcc=int(mfcc_cfg["n_mfcc"]),
                 n_fft=int(mfcc_cfg["n_fft"]),
                 hop_length=int(mfcc_cfg["hop_length"]),
+                include_delta=bool(mfcc_cfg.get("include_delta", False)),
             )
             result = self.model.predict(features)
 

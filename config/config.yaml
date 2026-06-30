@@ -27,6 +27,7 @@ audio:
     n_mfcc: 13
     n_fft: 512
     hop_length: 256
+    include_delta: false
   model:
     path: "models/tiny_cnn_audio_fp32.onnx"
   temporal_smoothing:

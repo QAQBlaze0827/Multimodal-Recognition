@@ -35,7 +35,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "chunk_size": 256,
         "device_id": -1,
         "window_seconds": 1.5,
-        "mfcc": {"n_mfcc": 13, "n_fft": 512, "hop_length": 256},
+        "mfcc": {"n_mfcc": 13, "n_fft": 512, "hop_length": 256, "include_delta": False},
         "model": {"path": "models/tiny_cnn_audio_int8.onnx"},
         "temporal_smoothing": {"enabled": True, "alpha": 0.7},
     },

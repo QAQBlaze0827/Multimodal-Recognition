@@ -58,7 +58,17 @@ def _dct(x: np.ndarray, n: int) -> np.ndarray:
     return np.sum(x[None, :] * np.cos(np.pi * k * (2 * i + 1) / (2.0 * N)), axis=1) * np.sqrt(2.0 / N)
 
 
-def extract_light_mfcc_like(samples, n_mfcc=13, n_fft=512, hop_length=256, n_mels=40) -> np.ndarray:
+def compute_delta(features: np.ndarray, window: int = 2) -> np.ndarray:
+    d = np.zeros_like(features)
+    denominator = 2 * sum(i * i for i in range(1, window + 1))
+    for i in range(1, window + 1):
+        forward = np.roll(features, -i, axis=1)
+        backward = np.roll(features, i, axis=1)
+        d += i * (forward - backward) / denominator
+    return d
+
+
+def extract_light_mfcc_like(samples, n_mfcc=13, n_fft=512, hop_length=256, n_mels=40, include_delta=False) -> np.ndarray:
     samples = np.asarray(samples, dtype=np.float32).reshape(-1)
     if samples.size < n_fft:
         samples = np.pad(samples, (0, n_fft - samples.size))
@@ -80,7 +90,13 @@ def extract_light_mfcc_like(samples, n_mfcc=13, n_fft=512, hop_length=256, n_mel
 
     log_mel = np.asarray(frames, dtype=np.float32)
     mfcc = np.apply_along_axis(lambda x: _dct(x, n_mfcc), 1, log_mel)
-    return mfcc.T
+    mfcc = mfcc.T
+
+    if include_delta:
+        delta = compute_delta(mfcc)
+        mfcc = np.concatenate([mfcc, delta], axis=0)
+
+    return mfcc
 
 
 def load_audio_files(data_dirs: list[Path]) -> list[tuple[np.ndarray, int]]:
