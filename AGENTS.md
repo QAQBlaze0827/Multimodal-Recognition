@@ -18,6 +18,8 @@
 - 環境建置：.venv（Python 3.11），訓練/執行依賴已安裝
 - FER2013 資料集下載 + 訓練：mini_xception_fp32.onnx（28,709 張圖片，30 epochs）
 - RAVDESS 音訊資料集下載 + 訓練：tiny_cnn_audio_fp32.onnx（1,440 個音檔，50 epochs）
+- 第二輪訓練：新增 TESS（2,800 筆）+ CREMA-D（7,442 筆），總計 11,682 筆，60 epochs
+  - FP32 模型：106KB，int8 模型：37KB
 - 驗證通過：模型載入 + dummy inference 正常
 
 ## 專案結構
@@ -65,13 +67,10 @@ Multimodal-Recognition/
 ```
 
 ## 目前限制
-- ⚠️ int8 量化模型 ConvInteger 不支援 CPU（dynamic quantization 限制）
-  - config.yaml 已改指向 FP32 模型，可正常推論
-- 音訊僅有 RAVDESS 資料集（CREMA-D/TESS 下載 URL 失效）
-- WSL 無 webcam，`app.y` 無法在本機執行（需實體機或 Windows）
+- 音訊含三個資料集：RAVDESS（1,440）+ TESS（2,800）+ CREMA-D（7,442），總計 11,682 筆
+- MFCC 特徵改用真實 mel-scale filterbank + DCT（numpy-only），無額外相依
+- WSL 無 webcam，無法在本機執行 app.py（需 Windows 實體機）
 - protobuf/mpl-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
-- ⚠️ soundfile 不在 requirements_train.txt 中，訓練音訊時需手動安裝：`pip install soundfile`
-- ⚠️ `train_audio_tiny_cnn.py` 曾有 `import tensorflow as tf as tf_module` bug（已修）
 
 ## 待辦事項
 - [x] 下載 FER2013 資料集到 data/datasets/fer
@@ -79,10 +78,19 @@ Multimodal-Recognition/
 - [x] 下載 RAVDESS 音訊資料集
 - [x] 訓練 tiny_cnn_audio_fp32.onnx（int8 版本因 ConvInteger 限制改用 FP32）
 - [x] 驗證：模型載入 + dummy 推論通過
-- [ ] 找 CREMA-D/TESS 替代下載來源（目前 URL 404）
-  - TESS 替代：`https://bj.bcebos.com/paddleaudio/datasets/TESS_Toronto_emotional_speech_set.zip`
-  - CREMA-D 替代：Hugging Face `razahtet/crema-d-audio`（需 `huggingface_hub`）
+- [x] 找 CREMA-D/TESS 替代下載來源
+  - TESS 替代：PaddleAudio 鏡像（2,800 筆）
+  - CREMA-D 替代：Zenodo WebDataset（7,442 筆）或 Hugging Face snapshot
 - [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
+
+## 音訊精度改善 TODO（依優先級排列）
+- [x] 音量正規化：load_audio_files 中 peak normalization（`audio /= max(|audio|)`）
+- [x] 資料擴充：訓練時加入高斯雜訊、音量擾動、SpecAugment
+- [x] Learning rate schedule：ReduceLROnPlateau
+- [x] Temporal smoothing：推論時對 softmax scores 做 moving average（alpha=0.7）
+- [ ] MFCC 13 → 26 + delta/delta-delta 特徵
+- [ ] Dropout 0.3 → 0.5 + SpatialDropout1D + L2 regularization
+- [ ] 模型輕微擴大：Conv1D 32→64→64 + Dense 128
 
 ## WSL 開發環境
 ```bash
@@ -109,7 +117,7 @@ python app.py --vision-only --no-display --max-frames 10
 python app.py --vision-only
 ```
 
-## 環境狀態（2025-06-29）
+## 環境狀態（2025-06-30）
 - Python 3.11.15 + .venv（位於專案根目錄）
 - 訓練依賴已安裝（tensorflow 2.16.2、tf2onnx 1.16.1、onnxruntime 1.17.3）
 - 執行依賴已安裝（opencv 4.11.0、mediapipe 0.10.14、sounddevice 0.4.6）

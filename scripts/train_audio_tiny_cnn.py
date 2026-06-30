@@ -112,21 +112,54 @@ def load_audio_files(data_dirs: list[Path]) -> list[tuple[np.ndarray, int]]:
                     from scipy import signal
                     new_len = int(len(audio) * SAMPLE_RATE / sr)
                     audio = signal.resample(audio, new_len)
+
+                peak = float(np.max(np.abs(audio)))
+                if peak > 1e-8:
+                    audio = audio / peak
                 samples_list.append((audio.astype(np.float32), label_idx))
 
     return samples_list
 
 
+def _augment_audio(audio: np.ndarray) -> np.ndarray:
+    audio = audio.copy()
+    if random.random() < 0.8:
+        audio = audio * random.uniform(0.7, 1.3)
+    if random.random() < 0.5:
+        noise_std = random.uniform(0.0, 0.006)
+        if noise_std > 0:
+            audio = audio + np.random.normal(0, noise_std * float(np.max(np.abs(audio))), size=audio.shape)
+    return audio
+
+
+def _spec_augment(mfcc: np.ndarray) -> np.ndarray:
+    mfcc = mfcc.copy()
+    n_mfcc, n_time = mfcc.shape
+    if random.random() < 0.5 and n_time > 20:
+        t_width = random.randint(5, min(15, n_time // 4))
+        t_start = random.randint(0, n_time - t_width)
+        mfcc[:, t_start:t_start + t_width] = 0.0
+    if random.random() < 0.3 and n_mfcc > 2:
+        f_width = random.randint(1, min(2, n_mfcc - 1))
+        f_start = random.randint(0, n_mfcc - f_width)
+        mfcc[f_start:f_start + f_width, :] = 0.0
+    return mfcc
+
+
 def make_dataset(
-    tf, samples_list: list[tuple[np.ndarray, int]], batch_size: int, shuffle: bool
+    tf, samples_list: list[tuple[np.ndarray, int]], batch_size: int, shuffle: bool, augment: bool = False
 ):
     import tensorflow as tf_module
 
     X, y = [], []
     for audio, label_idx in samples_list:
+        if augment:
+            audio = _augment_audio(audio)
         mfcc = extract_light_mfcc_like(audio, n_mfcc=N_MFCC, n_fft=N_FFT, hop_length=HOP_LENGTH)
         if mfcc.shape[1] < 10:
             continue
+        if augment:
+            mfcc = _spec_augment(mfcc)
         if mfcc.shape[1] < TARGET_FRAMES // HOP_LENGTH:
             pad_width = (TARGET_FRAMES // HOP_LENGTH) - mfcc.shape[1]
             mfcc = np.pad(mfcc, ((0, 0), (0, pad_width)), mode="constant")
@@ -206,13 +239,19 @@ def main() -> None:
 
     print(f"[train] Total: {len(all_samples)}, Train: {len(train_samples)}, Val: {len(val_samples)}")
 
-    train_ds = make_dataset(tf, train_samples, args.batch_size, shuffle=True)
-    val_ds = make_dataset(tf, val_samples, args.batch_size, shuffle=False)
+    train_ds = make_dataset(tf, train_samples, args.batch_size, shuffle=True, augment=True)
+    val_ds = make_dataset(tf, val_samples, args.batch_size, shuffle=False, augment=False)
 
     input_shape = (N_MFCC, TARGET_FRAMES // HOP_LENGTH)
     model = build_model(tf, input_shape, learning_rate=args.learning_rate)
     model.summary()
-    model.fit(train_ds, validation_data=val_ds, epochs=args.epochs)
+
+    callbacks = [
+        tf.keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1
+        ),
+    ]
+    model.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
 
     fp32_output = Path(args.fp32_output)
     fp32_output.parent.mkdir(parents=True, exist_ok=True)

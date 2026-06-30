@@ -29,6 +29,9 @@ audio:
     hop_length: 256
   model:
     path: "models/tiny_cnn_audio_fp32.onnx"
+  temporal_smoothing:
+    enabled: true
+    alpha: 0.7
 
 fusion:
   method: "confidence_weighted"

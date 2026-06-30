@@ -37,6 +37,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "window_seconds": 1.5,
         "mfcc": {"n_mfcc": 13, "n_fft": 512, "hop_length": 256},
         "model": {"path": "models/tiny_cnn_audio_int8.onnx"},
+        "temporal_smoothing": {"enabled": True, "alpha": 0.7},
     },
     "fusion": {
         "method": "confidence_weighted",

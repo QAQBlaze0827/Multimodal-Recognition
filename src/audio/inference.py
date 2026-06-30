@@ -6,6 +6,7 @@ import numpy as np
 
 from src.audio.features import extract_light_mfcc_like
 from src.audio.model import AudioEmotionModel
+from src.shared_types import make_result
 
 
 class AudioEmotionThread(threading.Thread):
@@ -14,6 +15,9 @@ class AudioEmotionThread(threading.Thread):
         self.state = state
         self.config = config
         self.model = model
+        smoothing = config.get("temporal_smoothing", {})
+        self.smooth_alpha = float(smoothing.get("alpha", 0.7)) if smoothing.get("enabled", True) else 0.0
+        self._smoothed_scores: dict[str, float] | None = None
 
     def run(self) -> None:
         try:
@@ -42,5 +46,18 @@ class AudioEmotionThread(threading.Thread):
                 hop_length=int(mfcc_cfg["hop_length"]),
             )
             result = self.model.predict(features)
+
+            if self.smooth_alpha > 0:
+                if self._smoothed_scores is None:
+                    self._smoothed_scores = dict(result.scores)
+                else:
+                    alpha = self.smooth_alpha
+                    for emotion in result.scores:
+                        self._smoothed_scores[emotion] = (
+                            alpha * self._smoothed_scores[emotion]
+                            + (1 - alpha) * result.scores[emotion]
+                        )
+                result = make_result("audio", self._smoothed_scores)
+
             with self.state.lock:
                 self.state.audio = result

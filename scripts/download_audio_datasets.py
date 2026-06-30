@@ -102,34 +102,46 @@ def download_cremad(output_dir: Path) -> None:
         return
 
     try:
-        from datasets import load_dataset
-        import soundfile as sf
-        import numpy as np
+        from huggingface_hub import snapshot_download
     except ImportError as exc:
         print(f"[crema-d] Cannot download: {exc}")
-        print("  Run: pip install datasets soundfile")
+        print("  Run: pip install huggingface_hub")
         return
 
-    print("[crema-d] Loading from Hugging Face (razahtet/crema-d-audio) ...")
-    ds = load_dataset("razahtet/crema-d-audio", split="train", trust_remote_code=True)
+    repo_id = "razahtet/crema-d-audio"
+    print(f"[crema-d] Downloading snapshot from {repo_id} ...")
+    cache_dir = snapshot_download(repo_id=repo_id, repo_type="dataset")
+    audio_root = Path(cache_dir) / "AudioWAV"
+    if not audio_root.exists():
+        print(f"[crema-d] ERROR: AudioWAV directory not found in {cache_dir}")
+        # fallback: search for wav files
+        wav_files = list(Path(cache_dir).rglob("*.wav"))
+        if wav_files:
+            audio_root = wav_files[0].parent
+        else:
+            print(f"[crema-d] No wav files found, aborting")
+            return
 
-    label_map = {0: "anger", 1: "disgust", 2: "fear", 3: "happy", 4: "neutral", 5: "sad"}
+    emotion_map = {
+        "ANG": "anger", "DIS": "disgust", "FEA": "fear",
+        "HAP": "happy", "NEU": "neutral", "SAD": "sad",
+    }
     count = 0
-    for i, item in enumerate(ds):
-        label = label_map[item["label"]]
-        audio = item["audio"]
-        array = np.asarray(audio["array"], dtype=np.float32)
-        sr = audio["sampling_rate"]
-
+    for wav in Path(audio_root).glob("*.wav"):
+        stem = wav.stem
+        parts = stem.split("_")
+        if len(parts) < 2:
+            continue
+        emotion_code = parts[-2]  # e.g., 1001_DFA_ANG_XX -> ANG
+        label = emotion_map.get(emotion_code)
+        if label is None:
+            continue
         dest_dir = output_dir / label
         dest_dir.mkdir(parents=True, exist_ok=True)
-
-        filename = f"cremad_{i:05d}.wav"
-        sf.write(str(dest_dir / filename), array, sr)
+        dest_path = dest_dir / wav.name
+        if not dest_path.exists():
+            shutil.copy2(wav, dest_path)
         count += 1
-
-        if count % 2000 == 0:
-            print(f"[crema-d] Progress: {count}/7442")
 
     print(f"[crema-d] Extracted {count} files")
 
@@ -144,17 +156,18 @@ def extract_tess(zip_path: Path, output_dir: Path) -> None:
 
     tess_map = {
         "angry": "angry", "disgust": "disgust", "fear": "fear",
-        "happy": "happy", "neutral": "neutral", "ps": "ps",
-        "sad": "sad",
+        "happy": "happy", "neutral": "neutral", "sad": "sad",
+        "pleasant_surprise": "pleasant_surprise",
+        "pleasant_surprised": "pleasant_surprised",
     }
 
     count = 0
     for wav in extract_dir.rglob("*.wav"):
-        basename = wav.stem
-        parts = basename.split("_")
+        parent = wav.parent.name
+        parts = parent.split("_")
         if len(parts) < 2:
             continue
-        raw_emotion = parts[1].lower()
+        raw_emotion = "_".join(parts[1:]).lower()
         label = tess_map.get(raw_emotion)
         if label is None:
             continue
