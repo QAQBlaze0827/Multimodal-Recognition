@@ -68,8 +68,8 @@ Multimodal-Recognition/
 - ⚠️ int8 量化模型 ConvInteger 不支援 CPU（dynamic quantization 限制）
   - config.yaml 已改指向 FP32 模型，可正常推論
 - 音訊僅有 RAVDESS 資料集（CREMA-D/TESS 下載 URL 失效）
-- WSL 無 webcam，`app.py` 無法在本機執行（需實體機或 Windows）
-- protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
+- WSL 無 webcam，`app.y` 無法在本機執行（需實體機或 Windows）
+- protobuf/mpl-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
 - ⚠️ soundfile 不在 requirements_train.txt 中，訓練音訊時需手動安裝：`pip install soundfile`
 - ⚠️ `train_audio_tiny_cnn.py` 曾有 `import tensorflow as tf as tf_module` bug（已修）
 
