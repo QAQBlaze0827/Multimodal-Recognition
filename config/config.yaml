@@ -33,7 +33,7 @@ audio:
 fusion:
   method: "confidence_weighted"
   fallback_emotion: "neutral"
-  min_confidence: 0.3
+  min_confidence: 0.1
 
 output:
   display:
