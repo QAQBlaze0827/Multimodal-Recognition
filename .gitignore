@@ -7,7 +7,6 @@ __pycache__/
 .ruff_cache/
 data/logs/*.csv
 data/datasets/
-models/*.onnx
 models/*.h5
 models/*.keras
 models/*.tflite
