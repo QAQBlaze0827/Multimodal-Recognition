@@ -13,16 +13,30 @@ class AudioEmotionModel:
         self.session = None
         self.input_name = ""
         self.backend = "heuristic"
+        self._time_frames = 93
+        self._log_count = 0
         self._try_load_onnx()
 
     def predict(self, features: np.ndarray):
         if self.session is not None:
             tensor = features.astype(np.float32)[None, :, :]
+            curr_frames = tensor.shape[2]
+            target = self._time_frames
+            if curr_frames < target:
+                pad = target - curr_frames
+                tensor = np.pad(tensor, ((0, 0), (0, 0), (0, pad)), mode="constant")
+            elif curr_frames > target:
+                tensor = tensor[:, :, :target]
             output = self.session.run(None, {self.input_name: tensor})[0]
             logits = np.asarray(output).reshape(-1)[: len(EMOTIONS)]
             exp = np.exp(logits - np.max(logits))
             probs = exp / max(float(exp.sum()), 1e-8)
-            return make_result("audio", dict(zip(EMOTIONS, probs.tolist())))
+            result = make_result("audio", dict(zip(EMOTIONS, probs.tolist())))
+            self._log_count += 1
+            if self._log_count % 10 == 0:
+                scores_str = ", ".join(f"{k}:{v:.2f}" for k, v in result.scores.items())
+                print(f"[audio] pred: {result.label} ({result.confidence:.2f}) {scores_str}")
+            return result
 
         energy = float(np.mean(np.abs(features)))
         scores = {emotion: 0.02 for emotion in EMOTIONS}
@@ -40,5 +54,8 @@ class AudioEmotionModel:
             self.session = session
             self.input_name = input_name
             self.backend = "onnx"
+            inp_shape = session.get_inputs()[0].shape
+            if len(inp_shape) >= 3 and isinstance(inp_shape[2], int):
+                self._time_frames = inp_shape[2]
         else:
             print(f"[audio] ONNX model load failed, fallback to heuristic")
