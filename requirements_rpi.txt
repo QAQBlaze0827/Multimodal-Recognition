@@ -3,3 +3,4 @@ opencv-python-headless==4.9.0.80
 onnxruntime==1.17.3
 PyYAML==6.0.2
 sounddevice==0.4.6
+# picamera2 為系統套件（sudo apt install python3-picamera2），透過 .venv/lib/python3.11/site-packages/system_packages.pth 連結
