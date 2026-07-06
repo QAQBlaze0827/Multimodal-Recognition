@@ -22,6 +22,11 @@
 - **CREMA-D 測試判定為雜訊**：含入後 val_acc 從 76% 暴跌至 53%，已排除
 - **Phase 3 測試判定無效**：N_MFCC=26+delta、Conv1D 64→64、Dense 128、Dropout 0.5+L2 等變動均導致準確度下降
 - 驗證通過：模型載入 + dummy inference 正常
+- **Web 前後端 + SQLite 資料庫**：
+  - `backend/`：FastAPI 伺服器（REST API + WebSocket + 靜態檔案服務）
+  - `frontend/`：暗色系 SPA（Live/Replay/History/Analytics 四頁，RWD 支援行動裝置）
+  - `src/output/db_logger.py`：推論結果寫入 SQLite（每秒 1 筆，30 天自動清理）
+  - 所有 API 端點 + WebSocket 即時推送已驗證通過
 
 ## 專案結構
 ```
@@ -44,17 +49,31 @@ Multimodal-Recognition/
 │   │   └── late_fusion.py         # 信心度加權融合
 │   └── output/
 │       ├── display.py             # OpenCV 疊加顯示
-│       └── logger.py              # CSV 日誌
-├── config/config.yaml             # 可調參數
+│       ├── logger.py              # CSV 日誌
+│       └── db_logger.py           # SQLite 資料庫寫入
+├── backend/                       # FastAPI 後端伺服器
+│   ├── __init__.py
+│   ├── app.py                     # REST API + WebSocket + 靜態檔案服務
+│   └── database.py                # SQLite CRUD（WAL mode）
+├── frontend/                      # 前端 SPA 網頁
+│   ├── index.html                 # 暗色系儀表板（Live/Replay/History/Analytics）
+│   ├── css/
+│   │   └── style.css              # RWD 響應式樣式
+│   └── js/
+│       ├── app.js                 # 主邏輯、路由切換
+│       ├── api.js                 # REST API 客戶端
+│       ├── websocket.js           # WebSocket 客戶端（自動重連）
+│       └── charts.js              # Chart.js 圖表設定
+├── config/config.yaml             # 可調參數（含 backend 段落）
 ├── models/                        # ONNX 模型放這裡（.gitkeep）
 ├── scripts/                       # 訓練 + 環境初始化腳本
-│   ├── train_video_mini_xception.py  # TensorFlow 訓練視覺模型
-│   ├── train_audio_tiny_cnn.py       # TensorFlow 訓練音訊模型
-│   ├── download_fer2013.py           # 下載 FER2013 資料集
-│   ├── download_audio_datasets.py    # 下載音訊資料集
-│   ├── run_train_vision.sh           # WSL 背景執行視覺訓練
-│   ├── run_train_audio.sh            # WSL 背景執行音訊訓練
-│   ├── run_download_audio.sh         # WSL 背景執行音訊下載
+│   ├── train_video_mini_xception.py   # TensorFlow 訓練視覺模型
+│   ├── train_audio_tiny_cnn.py        # TensorFlow 訓練音訊模型
+│   ├── download_fer2013.py            # 下載 FER2013 資料集
+│   ├── download_audio_datasets.py     # 下載音訊資料集
+│   ├── run_train_vision.sh            # WSL 背景執行視覺訓練
+│   ├── run_train_audio.sh             # WSL 背景執行音訊訓練
+│   ├── run_download_audio.sh          # WSL 背景執行音訊下載
 │   ├── setup_windows.ps1
 │   ├── setup_wsl.sh
 │   ├── run_vision.sh / .ps1
@@ -64,7 +83,8 @@ Multimodal-Recognition/
 ├── TRAINING.md                    # 訓練說明
 ├── requirements.txt               # PC 依賴
 ├── requirements_rpi.txt           # RPi 5 依賴（無 mediapipe）
-└── requirements_train.txt         # 訓練用依賴（tensorflow + tf2onnx）
+├── requirements_train.txt         # 訓練用依賴（tensorflow + tf2onnx）
+└── requirements_backend.txt       # 後端依賴（fastapi + uvicorn）
 ```
 
 ## 目前限制
@@ -82,6 +102,7 @@ Multimodal-Recognition/
 - [x] 驗證：模型載入 + dummy 推論通過
 - [x] 下載 CREMA-D 並測試 → 判定為雜訊，含入後從 76%→53%
 - [x] Phase 3 測試（MFCC 26、delta、bigger model、dropout 0.5+L2）→ 無效，全數 < 54%
+- [x] Web 前後端 + SQLite 資料庫（FastAPI + SPA + WebSocket 即時推送）
 - [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
 
 ## 音訊精度改善結果
@@ -107,9 +128,13 @@ node --version   # v20.x
 # 安裝 opencode
 npm install -g opencode-ai
 
-# 啟動
+# 啟動推論（WSL 無 webcam，僅 smoke test）
 source .venv/bin/activate
 python app.py --vision-only --no-display --max-frames 10
+
+# 啟動後端伺服器（瀏覽器可開 http://localhost:8000）
+pip install -r requirements_backend.txt
+python backend/app.py --host 0.0.0.0 --port 8000
 ```
 
 ## Windows 開發環境
@@ -122,10 +147,11 @@ python app.py --vision-only --no-display --max-frames 10
 python app.py --vision-only
 ```
 
-## 環境狀態（2026-06-30）
+## 環境狀態（2026-07-06）
 - Python 3.11.15 + .venv（位於專案根目錄）
 - 訓練依賴已安裝（tensorflow 2.16.2、tf2onnx 1.16.1、onnxruntime 1.17.3）
 - 執行依賴已安裝（opencv 4.11.0、mediapipe 0.10.14、sounddevice 0.4.6）
+- 後端依賴已安裝（fastapi 0.139.0、uvicorn 0.50.0、pydantic 2.13.4）
 - ⚠️ sounddevice 需要 `libportaudio2` 系統套件：`sudo apt-get install -y libportaudio2`
 - ⚠️ TensorFlow 以 CPU 模式執行（WSL 內無 CUDA 驅動）
 - ⚠️ protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作

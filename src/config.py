@@ -54,6 +54,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
         "csv_log": {"enabled": True, "path": "data/logs/session_{timestamp}.csv"},
     },
+    "backend": {
+        "enabled": False,
+        "host": "0.0.0.0",
+        "port": 8000,
+        "db_path": "data/emotion.db",
+        "log_interval": 1.0,
+        "retention_days": 30,
+    },
     "thermal": {
         "check_interval": 5,
         "thresholds": {"cautious": 65, "eco": 75, "critical": 85},

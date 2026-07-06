@@ -9,6 +9,7 @@ from src.audio.inference import AudioEmotionThread
 from src.audio.model import AudioEmotionModel
 from src.config import load_config
 from src.fusion.late_fusion import confidence_weighted_fusion
+from src.output.db_logger import DbLogger
 from src.output.display import draw_overlay
 from src.output.logger import CsvLogger
 from src.shared_types import EmotionResult
@@ -81,6 +82,18 @@ def run_video_loop(config: dict, args) -> None:
 
     logger_cfg = output_cfg["csv_log"]
     logger = CsvLogger(logger_cfg["path"], bool(logger_cfg["enabled"]))
+    backend_cfg = config.get("backend", {})
+    db_logger = None
+    if backend_cfg.get("enabled", False):
+        from datetime import datetime
+        session_id = datetime.now().strftime("session_%Y%m%d_%H%M%S")
+        db_logger = DbLogger(
+            db_path=backend_cfg["db_path"],
+            session_id=session_id,
+            log_interval=float(backend_cfg.get("log_interval", 1.0)),
+            retention_days=int(backend_cfg.get("retention_days", 30)),
+        )
+        print(f"[backend] logging to {backend_cfg['db_path']} (session={session_id})")
 
     fps = 0.0
     frame_count = 0
@@ -115,6 +128,8 @@ def run_video_loop(config: dict, args) -> None:
 
             temp = read_cpu_temp()
             logger.write(result, audio, fused, fps, temp)
+            if db_logger is not None:
+                db_logger.write(result, audio, fused, fps, temp)
 
             if display:
                 draw_overlay(cv2, frame, result, audio, fused, fps, temp)
@@ -130,6 +145,8 @@ def run_video_loop(config: dict, args) -> None:
         if audio_thread is not None:
             audio_thread.join(timeout=2.0)
         logger.close()
+        if db_logger is not None:
+            db_logger.close()
         detector.close()
         cap.release()
         if display:

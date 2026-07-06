@@ -6,6 +6,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 data/logs/*.csv
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.db
+*.db-wal
+*.db-shm
 data/datasets/
 models/*.h5
 models/*.keras

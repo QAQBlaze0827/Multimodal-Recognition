@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multimodal Emotion Recognition</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <h1><span class="dot"></span> Multimodal Emotion Recognition</h1>
+    <span class="status">WS: <span id="ws-status">connecting...</span></span>
+</header>
+
+<nav>
+    <a href="#" data-view="live" class="active">Live</a>
+    <a href="#" data-view="replay">Replay</a>
+    <a href="#" data-view="history">History</a>
+    <a href="#" data-view="analytics">Analytics</a>
+</nav>
+
+<main>
+
+<!-- ==================== LIVE VIEW ==================== -->
+<section id="view-live" class="view active">
+    <div class="grid-3">
+        <div class="card">
+            <h2>Fused</h2>
+            <div class="emotion-display">
+                <div class="label" id="fused-label">--</div>
+                <div class="confidence" id="fused-conf">--</div>
+                <div class="source" id="fused-src">Fused</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Video</h2>
+            <div class="emotion-display">
+                <div class="label" id="video-label">--</div>
+                <div class="confidence" id="video-conf">--</div>
+                <div class="source" id="video-src">Video</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Audio</h2>
+            <div class="emotion-display">
+                <div class="label" id="audio-label">--</div>
+                <div class="confidence" id="audio-conf">--</div>
+                <div class="source" id="audio-src">Audio</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2>Emotion Scores</h2>
+            <div id="live-bars"></div>
+        </div>
+        <div class="card">
+            <h2>System Status</h2>
+            <div class="grid-3">
+                <div class="stat-box"><div class="value" id="live-fps">-</div><div class="label">FPS</div></div>
+                <div class="stat-box"><div class="value" id="live-temp">-</div><div class="label">Temperature</div></div>
+                <div class="stat-box"><div class="value" id="live-face">-</div><div class="label">Face Detected</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== REPLAY VIEW ==================== -->
+<section id="view-replay" class="view">
+    <div class="card">
+        <h2>Session Replay</h2>
+        <select id="replay-session" class="session-select">
+            <option value="">Loading sessions...</option>
+        </select>
+        <button id="replay-load" class="btn">Load</button>
+    </div>
+
+    <div class="card">
+        <div class="replay-controls">
+            <button id="replay-play" disabled>▶ Play</button>
+            <label>Speed: <select id="replay-speed">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+                <option value="5">5x</option>
+                <option value="10">10x</option>
+            </select></label>
+            <span id="replay-current-idx">0 / 0</span>
+            <span id="replay-ts"></span>
+        </div>
+        <input type="range" id="replay-timeline" class="replay-timeline" min="0" max="0" value="0">
+        <div class="replay-current">
+            <div class="label" id="replay-emotion" style="font-size: 2rem; font-weight: 700;">--</div>
+            <div class="confidence" id="replay-conf">--</div>
+            <div id="replay-status"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Frame Scores</h2>
+        <div class="chart-container">
+            <canvas id="replay-chart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== HISTORY VIEW ==================== -->
+<section id="view-history" class="view">
+    <div class="card">
+        <h2>Recognition History</h2>
+        <div class="filter-bar">
+            <select id="filter-emotion">
+                <option value="">All Emotions</option>
+                <option value="neutral">Neutral</option>
+                <option value="happy">Happy</option>
+                <option value="sad">Sad</option>
+                <option value="anger">Anger</option>
+                <option value="fear">Fear</option>
+                <option value="surprise">Surprise</option>
+                <option value="disgust">Disgust</option>
+            </select>
+            <select id="filter-session">
+                <option value="">All Sessions</option>
+            </select>
+            <button id="history-filter-btn">Filter</button>
+            <button id="history-refresh">Refresh</button>
+        </div>
+        <div class="table-wrap" id="history-table">
+            <table>
+                <thead><tr>
+                    <th>Timestamp</th><th>Emotion</th><th>Confidence</th><th>Video/Audio</th><th>FPS</th>
+                </tr></thead>
+                <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== ANALYTICS VIEW ==================== -->
+<section id="view-analytics" class="view">
+    <div class="card">
+        <h2>Emotion Distribution</h2>
+        <div class="filter-bar">
+            <label>Period: <select id="analytics-days">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
+            </select></label>
+        </div>
+        <div id="analytics-summary"></div>
+        <div class="chart-container" style="height: 300px;">
+            <canvas id="analytics-pie"></canvas>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/websocket.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
