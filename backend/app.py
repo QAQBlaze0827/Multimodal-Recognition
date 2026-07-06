@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import json
 import sys
-import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -23,9 +22,12 @@ from pydantic import BaseModel
 
 from backend.database import (
     cleanup_old_sessions,
+    create_session,
     get_all_sessions,
     get_analytics_summary,
     get_emotion_timeline,
+    get_latest_log_id,
+    get_logs_after_id,
     get_recent_logs,
     get_session_logs_for_replay,
     get_session_stats,
@@ -36,6 +38,7 @@ from backend.database import (
 
 DB_PATH: str = ""
 CONNECTIONS: set[WebSocket] = set()
+POLL_TASK: asyncio.Task | None = None
 
 
 class EmotionLogIn(BaseModel):
@@ -57,8 +60,17 @@ class EmotionLogIn(BaseModel):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    global POLL_TASK
     init_db(DB_PATH)
-    yield
+    POLL_TASK = asyncio.create_task(_poll_database_logs())
+    try:
+        yield
+    finally:
+        POLL_TASK.cancel()
+        try:
+            await POLL_TASK
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="Multimodal Emotion Recognition API", version="1.0.0", lifespan=lifespan)
@@ -82,8 +94,8 @@ async def post_emotion(data: EmotionLogIn) -> dict[str, str]:
     row = data.model_dump()
     if row["timestamp"] is None:
         row["timestamp"] = datetime.now().isoformat(timespec="milliseconds")
+    create_session(DB_PATH, row["session_id"], "api")
     insert_log(DB_PATH, row)
-    await _broadcast(row)
     return {"status": "ok"}
 
 
@@ -154,12 +166,25 @@ async def _broadcast(data: dict[str, Any]) -> None:
         return
     message = json.dumps(data, default=str)
     dead: set[WebSocket] = set()
-    for ws in CONNECTIONS:
+    for ws in list(CONNECTIONS):
         try:
             await ws.send_text(message)
         except Exception:
             dead.add(ws)
     CONNECTIONS.difference_update(dead)
+
+
+async def _poll_database_logs(interval_seconds: float = 0.25) -> None:
+    last_id = get_latest_log_id(DB_PATH)
+    while True:
+        try:
+            rows = get_logs_after_id(DB_PATH, last_id, 100)
+            for row in rows:
+                last_id = max(last_id, int(row["id"]))
+                await _broadcast(row)
+        except Exception as exc:
+            print(f"[backend] database poll failed: {exc}")
+        await asyncio.sleep(interval_seconds)
 
 
 def serve(host: str = "0.0.0.0", port: int = 8000, db_path: str = "data/emotion.db") -> None:

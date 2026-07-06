@@ -140,6 +140,21 @@ def get_recent_logs(db_path: str, limit: int = 100) -> list[dict[str, Any]]:
     return query_logs(db_path, limit=limit)
 
 
+def get_latest_log_id(db_path: str) -> int:
+    conn = _get_conn(db_path)
+    row = conn.execute("SELECT COALESCE(MAX(id), 0) FROM emotion_logs").fetchone()
+    return int(row[0] or 0)
+
+
+def get_logs_after_id(db_path: str, last_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    conn = _get_conn(db_path)
+    rows = conn.execute(
+        "SELECT * FROM emotion_logs WHERE id > ? ORDER BY id ASC LIMIT ?",
+        (last_id, limit),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_session_logs_for_replay(db_path: str, session_id: str) -> list[dict[str, Any]]:
     conn = _get_conn(db_path)
     rows = conn.execute(
@@ -192,7 +207,10 @@ def get_session_stats(db_path: str, session_id: str) -> dict[str, Any]:
 def get_emotion_timeline(db_path: str, session_id: str) -> list[dict[str, Any]]:
     conn = _get_conn(db_path)
     rows = conn.execute(
-        "SELECT timestamp, fused_emotion, fused_conf FROM emotion_logs WHERE session_id = ? ORDER BY timestamp ASC",
+        """SELECT timestamp, fused_emotion, fused_conf, video_scores_json, audio_scores_json
+           FROM emotion_logs
+           WHERE session_id = ?
+           ORDER BY timestamp ASC""",
         (session_id,),
     ).fetchall()
     return [dict(r) for r in rows]

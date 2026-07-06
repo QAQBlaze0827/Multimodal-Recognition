@@ -53,7 +53,7 @@ function updateLiveView(data) {
     updateEmotionDisplay('video', data.video_emotion || '-', data.video_conf || 0, 'Video');
     updateEmotionDisplay('audio', data.audio_emotion || '-', data.audio_conf || 0, 'Audio');
 
-    const scores = data.video_scores_json ? JSON.parse(data.video_scores_json) : {};
+    const scores = readScores(data, 'video');
     renderBars('live-bars', scores, data.fused_emotion);
 
     document.getElementById('live-fps').textContent = data.fps ? data.fps.toFixed(1) : '-';
@@ -62,6 +62,19 @@ function updateLiveView(data) {
 
     const dot = document.querySelector('header .dot');
     if (dot) dot.style.background = EMOTION_COLORS[data.fused_emotion] || 'var(--success)';
+}
+
+function readScores(data, source) {
+    const objectKey = `${source}_scores`;
+    const jsonKey = `${source}_scores_json`;
+    if (data[objectKey] && typeof data[objectKey] === 'object') return data[objectKey];
+    if (!data[jsonKey]) return {};
+    try {
+        return JSON.parse(data[jsonKey]);
+    } catch (e) {
+        console.warn(`Invalid ${jsonKey}:`, e);
+        return {};
+    }
 }
 
 function updateEmotionDisplay(prefix, emotion, confidence, source) {
@@ -205,12 +218,11 @@ async function startReplay() {
         const slider = document.getElementById('replay-timeline');
         slider.max = replayData.length - 1;
         slider.value = 0;
-        document.getElementById('replay-total').textContent = replayData.length;
         document.getElementById('replay-play').disabled = false;
         document.getElementById('replay-play').textContent = '▶ Play';
         seekReplay(0);
         if (replayChart) {
-            const firstScores = JSON.parse(replayData[0].video_scores_json || '{}');
+            const firstScores = readScores(replayData[0], 'video');
             updateReplayChart(firstScores, replayData[0].fused_emotion);
         }
     } catch (e) {
@@ -253,7 +265,7 @@ function seekReplay(idx) {
     const slider = document.getElementById('replay-timeline');
     if (slider) slider.value = idx;
 
-    const scores = JSON.parse(d.video_scores_json || '{}');
+    const scores = readScores(d, 'video');
     updateReplayChart(scores, d.fused_emotion);
 }
 
