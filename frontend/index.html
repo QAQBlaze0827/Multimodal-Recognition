@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multimodal Emotion Recognition</title>
+<title>多模態情緒辨識儀表板</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
@@ -11,59 +11,92 @@
 <body>
 
 <header>
-    <h1><span class="dot"></span> Multimodal Emotion Recognition</h1>
-    <span class="status">WS: <span id="ws-status">connecting...</span></span>
+    <h1><span class="dot"></span> <span id="app-title">多模態情緒辨識儀表板</span></h1>
+    <div class="header-actions">
+        <span class="status"><span id="ws-label">連線：</span><span id="ws-status" data-state="connecting">連線中...</span></span>
+        <button id="lang-toggle" type="button" class="lang-toggle">EN</button>
+    </div>
 </header>
 
 <nav>
-    <a href="#" data-view="live" class="active">Live</a>
-    <a href="#" data-view="replay">Replay</a>
-    <a href="#" data-view="history">History</a>
-    <a href="#" data-view="analytics">Analytics</a>
+    <a href="#" data-view="live" class="active">即時狀態</a>
+    <a href="#" data-view="replay">回放</a>
+    <a href="#" data-view="history">歷史紀錄</a>
+    <a href="#" data-view="analytics">統計分析</a>
 </nav>
 
 <main>
 
 <!-- ==================== LIVE VIEW ==================== -->
 <section id="view-live" class="view active">
+    <div class="card live-summary">
+        <div>
+            <h2>目前判讀</h2>
+            <div class="summary-emotion" id="summary-emotion">等待資料</div>
+            <div class="summary-line" id="summary-line">啟動辨識程式後，這裡會顯示即時情緒狀態。</div>
+        </div>
+        <div class="summary-meta">
+            <div class="quality-pill" id="summary-confidence">尚無訊號</div>
+            <div class="quality-pill" id="summary-stability">尚無趨勢</div>
+        </div>
+    </div>
+
     <div class="grid-3">
         <div class="card">
-            <h2>Fused</h2>
+            <h2>綜合結果</h2>
             <div class="emotion-display">
                 <div class="label" id="fused-label">--</div>
                 <div class="confidence" id="fused-conf">--</div>
-                <div class="source" id="fused-src">Fused</div>
+                <div class="source" id="fused-src">綜合</div>
             </div>
         </div>
         <div class="card">
-            <h2>Video</h2>
+            <h2>臉部表情</h2>
             <div class="emotion-display">
                 <div class="label" id="video-label">--</div>
                 <div class="confidence" id="video-conf">--</div>
-                <div class="source" id="video-src">Video</div>
+                <div class="source" id="video-src">視覺</div>
             </div>
         </div>
         <div class="card">
-            <h2>Audio</h2>
+            <h2>語音情緒</h2>
             <div class="emotion-display">
                 <div class="label" id="audio-label">--</div>
                 <div class="confidence" id="audio-conf">--</div>
-                <div class="source" id="audio-src">Audio</div>
+                <div class="source" id="audio-src">音訊</div>
             </div>
         </div>
     </div>
 
     <div class="grid-2">
         <div class="card">
-            <h2>Emotion Scores</h2>
+            <h2>情緒分數</h2>
             <div id="live-bars"></div>
         </div>
         <div class="card">
-            <h2>System Status</h2>
+            <h2>判斷依據</h2>
+            <div class="insight-list">
+                <div><span>臉部</span><strong id="insight-face">等待中</strong></div>
+                <div><span>語音</span><strong id="insight-audio">等待中</strong></div>
+                <div><span>一致性</span><strong id="insight-agreement">等待中</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2>最近趨勢</h2>
+            <div class="summary-line" id="trend-summary">累積幾筆資料後，會顯示最近情緒變化。</div>
+            <div id="live-trend" class="trend-strip">
+                <span class="muted">尚無即時資料。</span>
+            </div>
+        </div>
+        <div class="card">
+            <h2>系統狀態</h2>
             <div class="grid-3">
                 <div class="stat-box"><div class="value" id="live-fps">-</div><div class="label">FPS</div></div>
-                <div class="stat-box"><div class="value" id="live-temp">-</div><div class="label">Temperature</div></div>
-                <div class="stat-box"><div class="value" id="live-face">-</div><div class="label">Face Detected</div></div>
+                <div class="stat-box"><div class="value" id="live-temp">-</div><div class="label">溫度</div></div>
+                <div class="stat-box"><div class="value" id="live-face">-</div><div class="label">臉部偵測</div></div>
             </div>
         </div>
     </div>
@@ -72,17 +105,17 @@
 <!-- ==================== REPLAY VIEW ==================== -->
 <section id="view-replay" class="view">
     <div class="card">
-        <h2>Session Replay</h2>
+        <h2>Session 回放</h2>
         <select id="replay-session" class="session-select">
-            <option value="">Loading sessions...</option>
+            <option value="">載入 session 中...</option>
         </select>
-        <button id="replay-load" class="btn">Load</button>
+        <button id="replay-load" class="btn">載入</button>
     </div>
 
     <div class="card">
         <div class="replay-controls">
-            <button id="replay-play" disabled>▶ Play</button>
-            <label>Speed: <select id="replay-speed">
+            <button id="replay-play" disabled>播放</button>
+            <label>速度：<select id="replay-speed">
                 <option value="0.5">0.5x</option>
                 <option value="1" selected>1x</option>
                 <option value="2">2x</option>
@@ -97,11 +130,12 @@
             <div class="label" id="replay-emotion" style="font-size: 2rem; font-weight: 700;">--</div>
             <div class="confidence" id="replay-conf">--</div>
             <div id="replay-status"></div>
+            <div class="summary-line" id="replay-insight">載入 session 後，可逐筆查看當下情緒判讀。</div>
         </div>
     </div>
 
     <div class="card">
-        <h2>Frame Scores</h2>
+        <h2>當下分數</h2>
         <div class="chart-container">
             <canvas id="replay-chart"></canvas>
         </div>
@@ -111,30 +145,31 @@
 <!-- ==================== HISTORY VIEW ==================== -->
 <section id="view-history" class="view">
     <div class="card">
-        <h2>Recognition History</h2>
+        <h2>辨識歷史</h2>
         <div class="filter-bar">
             <select id="filter-emotion">
-                <option value="">All Emotions</option>
-                <option value="neutral">Neutral</option>
-                <option value="happy">Happy</option>
-                <option value="sad">Sad</option>
-                <option value="anger">Anger</option>
-                <option value="fear">Fear</option>
-                <option value="surprise">Surprise</option>
-                <option value="disgust">Disgust</option>
+                <option value="">全部情緒</option>
+                <option value="neutral">中性</option>
+                <option value="happy">開心</option>
+                <option value="sad">悲傷</option>
+                <option value="anger">生氣</option>
+                <option value="fear">害怕</option>
+                <option value="surprise">驚訝</option>
+                <option value="disgust">厭惡</option>
             </select>
             <select id="filter-session">
-                <option value="">All Sessions</option>
+                <option value="">全部 Session</option>
             </select>
-            <button id="history-filter-btn">Filter</button>
-            <button id="history-refresh">Refresh</button>
+            <button id="history-filter-btn">篩選</button>
+            <button id="history-refresh">重新整理</button>
         </div>
+        <div id="history-summary" class="summary-line">選擇篩選條件或重新整理，即可查看最近紀錄摘要。</div>
         <div class="table-wrap" id="history-table">
             <table>
                 <thead><tr>
-                    <th>Timestamp</th><th>Emotion</th><th>Confidence</th><th>Video/Audio</th><th>FPS</th>
+                    <th>時間</th><th>情緒</th><th>可信度</th><th>視覺/音訊</th><th>FPS</th>
                 </tr></thead>
-                <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+                <tbody><tr><td colspan="5">載入中...</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -143,16 +178,17 @@
 <!-- ==================== ANALYTICS VIEW ==================== -->
 <section id="view-analytics" class="view">
     <div class="card">
-        <h2>Emotion Distribution</h2>
+        <h2>情緒分布</h2>
         <div class="filter-bar">
-            <label>Period: <select id="analytics-days">
-                <option value="7">Last 7 days</option>
-                <option value="30" selected>Last 30 days</option>
-                <option value="90">Last 90 days</option>
-                <option value="365">Last year</option>
+            <label>期間：<select id="analytics-days">
+                <option value="7">最近 7 天</option>
+                <option value="30" selected>最近 30 天</option>
+                <option value="90">最近 90 天</option>
+                <option value="365">最近一年</option>
             </select></label>
         </div>
         <div id="analytics-summary"></div>
+        <div id="analytics-insight" class="summary-line">選擇期間後，這裡會整理主要情緒分布。</div>
         <div class="chart-container" style="height: 300px;">
             <canvas id="analytics-pie"></canvas>
         </div>

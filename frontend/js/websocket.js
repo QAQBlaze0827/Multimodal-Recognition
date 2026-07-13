@@ -8,7 +8,8 @@ function connectWebSocket() {
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-        document.getElementById('ws-status').textContent = 'connected';
+        document.getElementById('ws-status').dataset.state = 'connected';
+        document.getElementById('ws-status').textContent = typeof tr === 'function' ? tr('connected') : 'connected';
         document.getElementById('ws-status').style.color = 'var(--success)';
     };
 
@@ -22,7 +23,8 @@ function connectWebSocket() {
     };
 
     ws.onclose = () => {
-        document.getElementById('ws-status').textContent = 'disconnected';
+        document.getElementById('ws-status').dataset.state = 'disconnected';
+        document.getElementById('ws-status').textContent = typeof tr === 'function' ? tr('disconnected') : 'disconnected';
         document.getElementById('ws-status').style.color = 'var(--danger)';
         setTimeout(connectWebSocket, 3000);
     };

@@ -8,9 +8,38 @@ const EMOTION_COLORS = {
     disgust:  '#f97316',
 };
 
+const EMOTION_LABELS = {
+    zh: {
+        neutral: '中性',
+        happy: '開心',
+        sad: '悲傷',
+        anger: '生氣',
+        fear: '害怕',
+        surprise: '驚訝',
+        disgust: '厭惡',
+    },
+    en: {
+        neutral: 'Neutral',
+        happy: 'Happy',
+        sad: 'Sad',
+        anger: 'Anger',
+        fear: 'Fear',
+        surprise: 'Surprise',
+        disgust: 'Disgust',
+    },
+};
+
 let pieChart = null;
 let timelineChart = null;
 let replayChart = null;
+
+function chartLanguage() {
+    return window.APP_LANG === 'en' ? 'en' : 'zh';
+}
+
+function chartEmotionLabel(emotion) {
+    return EMOTION_LABELS[chartLanguage()][emotion] || emotion;
+}
 
 function createPieChart(canvasId, data) {
     const ctx = document.getElementById(canvasId);
@@ -22,7 +51,7 @@ function createPieChart(canvasId, data) {
     pieChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels,
+            labels: labels.map(chartEmotionLabel),
             datasets: [{
                 data: values,
                 backgroundColor: colors,
@@ -53,7 +82,7 @@ function createTimelineChart(canvasId, timelineData) {
     const emotions = [...new Set(timelineData.map(d => d.fused_emotion))];
 
     const datasets = emotions.map(emotion => ({
-        label: emotion,
+        label: chartEmotionLabel(emotion),
         data: timelineData.map(d => d.fused_emotion === emotion ? d.fused_conf : 0),
         backgroundColor: EMOTION_COLORS[emotion] || '#666',
         borderColor: EMOTION_COLORS[emotion] || '#666',
@@ -93,14 +122,15 @@ function createReplayChart(canvasId) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
     if (replayChart) replayChart.destroy();
+    const emotions = ['neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'];
     replayChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'],
+            labels: emotions.map(chartEmotionLabel),
             datasets: [{
-                label: 'Confidence',
+                label: chartLanguage() === 'zh' ? '可信度' : 'Confidence',
                 data: [0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: ['#9ca3af', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#eab308', '#f97316'],
+                backgroundColor: emotions.map(emotion => EMOTION_COLORS[emotion]),
                 borderColor: '#1a1d27',
                 borderWidth: 1,
             }],
