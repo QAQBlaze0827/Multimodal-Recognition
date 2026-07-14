@@ -22,7 +22,9 @@ audio:
   sample_rate: 16000
   chunk_size: 256
   device_id: -1
-  window_seconds: 1.5
+  window_seconds: 2.0
+  vad_threshold: 0.02
+  highpass_cutoff: 80
   mfcc:
     n_mfcc: 13
     n_fft: 512
@@ -32,12 +34,12 @@ audio:
     path: "models/tiny_cnn_audio_fp32.onnx"
   temporal_smoothing:
     enabled: true
-    alpha: 0.7
+    alpha: 0.4
 
 fusion:
   method: "confidence_weighted"
   fallback_emotion: "neutral"
-  min_confidence: 0.1
+  min_confidence: 0.3
 
 output:
   display:

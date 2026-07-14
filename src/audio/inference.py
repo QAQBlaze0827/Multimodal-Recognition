@@ -4,7 +4,7 @@ import threading
 
 import numpy as np
 
-from src.audio.features import extract_light_mfcc_like
+from src.audio.features import extract_light_mfcc_like, highpass_filter
 from src.audio.model import AudioEmotionModel
 from src.shared_types import make_result
 
@@ -18,6 +18,7 @@ class AudioEmotionThread(threading.Thread):
         smoothing = config.get("temporal_smoothing", {})
         self.smooth_alpha = float(smoothing.get("alpha", 0.7)) if smoothing.get("enabled", True) else 0.0
         self._smoothed_scores: dict[str, float] | None = None
+        self._vad_threshold = float(config.get("vad_threshold", 0.02))
 
     def run(self) -> None:
         try:
@@ -29,14 +30,23 @@ class AudioEmotionThread(threading.Thread):
         sample_rate = int(self.config["sample_rate"])
         window_seconds = float(self.config["window_seconds"])
         frames = int(sample_rate * window_seconds)
+        hp_cutoff = float(self.config.get("highpass_cutoff", 80))
 
         while not self.state.stop:
             audio = sd.rec(frames, samplerate=sample_rate, channels=1, dtype="float32")
             sd.wait()
             samples = audio.reshape(-1)
+
+            peak = float(np.max(np.abs(samples)))
+            if peak > 1e-8:
+                samples = samples / peak
+
             rms = float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
-            if rms < 0.01:
+            if rms < self._vad_threshold:
                 continue
+
+            samples = highpass_filter(samples, sample_rate=sample_rate, cutoff_hz=hp_cutoff)
+
             mfcc_cfg = self.config["mfcc"]
             features = extract_light_mfcc_like(
                 samples,

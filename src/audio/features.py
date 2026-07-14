@@ -34,6 +34,17 @@ def _dct(x: np.ndarray, n: int) -> np.ndarray:
     return np.sum(x[None, :] * np.cos(np.pi * k * (2 * i + 1) / (2.0 * N)), axis=1) * np.sqrt(2.0 / N)
 
 
+def highpass_filter(samples: np.ndarray, sample_rate: int = 16000, cutoff_hz: float = 80.0) -> np.ndarray:
+    dt = 1.0 / sample_rate
+    rc = 1.0 / (2.0 * np.pi * cutoff_hz)
+    alpha = rc / (rc + dt)
+    y = np.zeros_like(samples)
+    y[0] = samples[0]
+    for i in range(1, len(samples)):
+        y[i] = alpha * y[i - 1] + alpha * (samples[i] - samples[i - 1])
+    return y
+
+
 def compute_delta(features: np.ndarray, window: int = 2) -> np.ndarray:
     d = np.zeros_like(features)
     denominator = 2 * sum(i * i for i in range(1, window + 1))

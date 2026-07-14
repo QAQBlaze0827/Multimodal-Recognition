@@ -110,6 +110,12 @@ Multimodal-Recognition/
 - [x] Web 前後端 + SQLite 資料庫（FastAPI + SPA + WebSocket 即時推送）
 - [x] 情緒類別 7→4 縮減：shared_types.py / 推論管線 / 前端 / 資料庫 / 訓練腳本
 - [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
+- [x] **音訊推論精度改善（Phase 4：inference 管線修正）**
+  - [x] 推論前加入 peak normalization（matching training）
+  - [x] 加入 voice activity detection（VAD，提高 energy threshold）
+  - [x] 降低 temporal smoothing alpha（0.7→0.4）
+  - [x] 加入高通濾波器（high-pass filter，去除低頻噪音）
+  - [x] 調整 window_seconds（1.5→2.0）與 fusion min_confidence（0.1→0.3）
 
 ## 音訊精度改善結果
 | Phase | 變更 | 訓練資料 | val_acc |
