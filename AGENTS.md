@@ -122,7 +122,7 @@ Multimodal-Recognition/
   - [x] window_seconds 設回 1.5 匹配模型
 - [x] **音訊 bias 修正（Phase 6：logit adjustment + confidence floor）**
   - [x] 調降 anger logit 權重（×0.6）
-  - [x] 調升 neutral logit 權重（×1.4）
+  - [x] 調升 neutral logit 權重（×1.4），後續因 neutral 壓過真人語音改回 ×1.0
   - [x] 加入 confidence floor（max(probs) < 0.35 時輸出 neutral）
 
 ## 音訊精度改善結果
