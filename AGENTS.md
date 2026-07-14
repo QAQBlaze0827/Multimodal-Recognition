@@ -124,6 +124,7 @@ Multimodal-Recognition/
   - [x] 調降 anger logit 權重（×0.6）
   - [x] 調升 neutral logit 權重（×1.4），後續因 neutral 壓過真人語音改回 ×1.0
   - [x] 加入 confidence floor（max(probs) < 0.35 時輸出 neutral）
+  - [x] VAD 未通過時 state.audio = None，避免舊 neutral 持續扭曲 fusion
 
 ## 音訊精度改善結果
 | Phase | 變更 | 訓練資料 | val_acc |

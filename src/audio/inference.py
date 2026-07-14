@@ -63,6 +63,9 @@ class AudioEmotionThread(threading.Thread):
 
             rms = float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
             if rms < self._vad_threshold:
+                with self.state.lock:
+                    self.state.audio = None
+                self._smoothed_scores = None
                 continue
 
             samples = highpass_filter(samples, sample_rate=sample_rate, cutoff_hz=hp_cutoff)
