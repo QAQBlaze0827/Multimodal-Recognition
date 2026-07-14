@@ -24,7 +24,7 @@
 
 ### 功能
 
-- 透過 **Webcam** 即時偵測人臉並辨識表情（7 類情緒）
+- 透過 **Webcam** 即時偵測人臉並辨識表情（4 類情緒）
 - 透過 **麥克風** 即時分析語調情緒
 - **晚期融合** 兩個模態結果，輸出最終情緒判斷
 - **即時顯示**（OpenCV 疊加）+ **CSV 紀錄**
@@ -37,9 +37,6 @@
 | 1 | Happy | 快樂 |
 | 2 | Sad | 悲傷 |
 | 3 | Anger | 生氣 |
-| 4 | Fear | 恐懼 |
-| 5 | Surprise | 驚訝 |
-| 6 | Disgust | 厭惡 |
 
 ### 技術堆疊
 
@@ -216,7 +213,7 @@ Input: 48x48 Grayscale
 ├─ SeparableConv2D 256, 3×3 → BN → ReLU
 ├─ GlobalAveragePooling
 ├─ Dropout 0.5
-└─ Dense 7 → Softmax
+└─ Dense 4 → Softmax
 ```
 
 | 屬性 | 數值 |
@@ -282,7 +279,7 @@ Input: 13 × 92 (MFCC)
 ├─ GlobalAveragePooling 1D
 ├─ Dense 64 → ReLU
 ├─ Dropout 0.3
-└─ Dense 7 → Softmax
+└─ Dense 4 → Softmax
 ```
 
 | 屬性 | 數值 |

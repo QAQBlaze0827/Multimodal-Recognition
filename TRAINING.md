@@ -23,17 +23,11 @@ data/datasets/fer/
     happy/
     sad/
     anger/
-    fear/
-    surprise/
-    disgust/
   val/
     neutral/
     happy/
     sad/
     anger/
-    fear/
-    surprise/
-    disgust/
 ```
 
 每個情緒資料夾放臉部圖片。圖片可以是彩色或灰階，訓練程式會轉成 `48x48` grayscale。
@@ -60,7 +54,7 @@ python app.py --vision-only
 
 可使用的公開資料集方向：
 
-- FER-2013：常見臉部表情資料集，7 類情緒。
+- FER-2013：常見臉部表情資料集，4 類情緒。
 - CK+：表情資料較乾淨，但資料量較小。
 - RAF-DB：品質較好，但授權和申請流程要另外確認。
 

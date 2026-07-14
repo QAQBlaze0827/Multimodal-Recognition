@@ -11,11 +11,8 @@ from PIL import Image
 
 EMOTIONS_MAP = {
     0: "anger",
-    1: "disgust",
-    2: "fear",
     3: "happy",
     4: "sad",
-    5: "surprise",
     6: "neutral",
 }
 

@@ -6,7 +6,7 @@ from time import monotonic
 from typing import Any
 
 
-EMOTIONS = ("neutral", "happy", "sad", "anger", "fear", "surprise", "disgust")
+EMOTIONS = ("neutral", "happy", "sad", "anger")
 
 
 @dataclass(frozen=True)

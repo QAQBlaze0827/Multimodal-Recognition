@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-EMOTIONS = ("neutral", "happy", "sad", "anger", "fear", "surprise", "disgust")
+EMOTIONS = ("neutral", "happy", "sad", "anger")
 SAMPLE_RATE = 16000
 N_MFCC = 13
 N_FFT = 512

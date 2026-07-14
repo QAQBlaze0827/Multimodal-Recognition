@@ -22,9 +22,6 @@
     --color-happy: #22c55e;
     --color-sad: #3b82f6;
     --color-anger: #ef4444;
-    --color-fear: #a855f7;
-    --color-surprise: #eab308;
-    --color-disgust: #f97316;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

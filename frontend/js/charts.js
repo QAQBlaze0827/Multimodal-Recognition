@@ -3,9 +3,6 @@ const EMOTION_COLORS = {
     happy:    '#22c55e',
     sad:      '#3b82f6',
     anger:    '#ef4444',
-    fear:     '#a855f7',
-    surprise: '#eab308',
-    disgust:  '#f97316',
 };
 
 const EMOTION_LABELS = {
@@ -14,18 +11,12 @@ const EMOTION_LABELS = {
         happy: '開心',
         sad: '悲傷',
         anger: '生氣',
-        fear: '害怕',
-        surprise: '驚訝',
-        disgust: '厭惡',
     },
     en: {
         neutral: 'Neutral',
         happy: 'Happy',
         sad: 'Sad',
         anger: 'Anger',
-        fear: 'Fear',
-        surprise: 'Surprise',
-        disgust: 'Disgust',
     },
 };
 
@@ -122,14 +113,14 @@ function createReplayChart(canvasId) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return null;
     if (replayChart) replayChart.destroy();
-    const emotions = ['neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'];
+    const emotions = ['neutral', 'happy', 'sad', 'anger'];
     replayChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: emotions.map(chartEmotionLabel),
             datasets: [{
                 label: chartLanguage() === 'zh' ? '可信度' : 'Confidence',
-                data: [0, 0, 0, 0, 0, 0, 0],
+                data: [0, 0, 0, 0],
                 backgroundColor: emotions.map(emotion => EMOTION_COLORS[emotion]),
                 borderColor: '#1a1d27',
                 borderWidth: 1,

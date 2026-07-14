@@ -1,7 +1,7 @@
 # Multimodal-Recognition
 
 ## 專案概述
-多模態情緒辨識系統，即時分析 Webcam 臉部表情 + 麥克風語調，輸出 7 類情緒（neutral, happy, sad, anger, fear, surprise, disgust）。支援 PC (Windows) 與 Raspberry Pi 5 部署。
+多模態情緒辨識系統，即時分析 Webcam 臉部表情 + 麥克風語調，輸出 4 類情緒（neutral, happy, sad, anger）。支援 PC (Windows) 與 Raspberry Pi 5 部署。
 
 ## 已完成
 - 完整推論管線：src/video/、src/audio/、src/fusion/、src/output/
@@ -27,6 +27,11 @@
   - `frontend/`：暗色系 SPA（Live/Replay/History/Analytics 四頁，RWD 支援行動裝置）
   - `src/output/db_logger.py`：推論結果寫入 SQLite（每秒 1 筆，30 天自動清理）
   - 所有 API 端點 + WebSocket 即時推送已驗證通過
+- **情緒類別 7→4 縮減**：移除 fear/surprise/disgust，僅保留 neutral/happy/sad/anger
+  - 推論層：`EMOTIONS` tuple 改為 4 類，ONNX 模型 7 類輸出取前 4 再正規化
+  - 前端：charts.js / app.js / index.html / style.css 同步更新
+  - 資料庫：舊資料清空，重新開始
+  - 訓練腳本已同步更新，未來可重新訓練 4 類模型
 
 ## 專案結構
 ```
@@ -103,6 +108,7 @@ Multimodal-Recognition/
 - [x] 下載 CREMA-D 並測試 → 判定為雜訊，含入後從 76%→53%
 - [x] Phase 3 測試（MFCC 26、delta、bigger model、dropout 0.5+L2）→ 無效，全數 < 54%
 - [x] Web 前後端 + SQLite 資料庫（FastAPI + SPA + WebSocket 即時推送）
+- [x] 情緒類別 7→4 縮減：shared_types.py / 推論管線 / 前端 / 資料庫 / 訓練腳本
 - [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
 
 ## 音訊精度改善結果

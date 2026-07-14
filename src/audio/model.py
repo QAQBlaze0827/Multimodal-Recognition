@@ -42,7 +42,7 @@ class AudioEmotionModel:
         scores = {emotion: 0.02 for emotion in EMOTIONS}
         scores["neutral"] = 0.75
         if energy > 3.0:
-            scores["surprise"] = 0.35
+            scores["anger"] = 0.35
             scores["neutral"] = 0.45
         return make_result("audio", scores)
 

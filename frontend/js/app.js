@@ -243,7 +243,7 @@ function applyLanguage() {
 function updateStaticFormLabels() {
     const emotionSelect = document.getElementById('filter-emotion');
     if (emotionSelect) {
-        const labels = ['', 'neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'];
+        const labels = ['', 'neutral', 'happy', 'sad', 'anger'];
         [...emotionSelect.options].forEach((option, index) => {
             option.textContent = index === 0 ? tr('allEmotions') : formatEmotion(labels[index]);
         });
@@ -411,9 +411,6 @@ function formatEmotion(emotion) {
         happy: '開心',
         sad: '悲傷',
         anger: '生氣',
-        fear: '害怕',
-        surprise: '驚訝',
-        disgust: '厭惡',
         unknown: '未知',
     };
     const enLabels = {
@@ -421,9 +418,6 @@ function formatEmotion(emotion) {
         happy: 'Happy',
         sad: 'Sad',
         anger: 'Anger',
-        fear: 'Fear',
-        surprise: 'Surprise',
-        disgust: 'Disgust',
         unknown: 'Unknown',
     };
     const labels = currentLang === 'zh' ? zhLabels : enLabels;
@@ -436,18 +430,12 @@ function shortEmotion(emotion) {
         happy: '喜',
         sad: '悲',
         anger: '怒',
-        fear: '懼',
-        surprise: '驚',
-        disgust: '厭',
     };
     const enLabels = {
         neutral: 'Neu',
         happy: 'Hap',
         sad: 'Sad',
         anger: 'Ang',
-        fear: 'Fear',
-        surprise: 'Sur',
-        disgust: 'Dis',
     };
     const labels = currentLang === 'zh' ? zhLabels : enLabels;
     return labels[emotion] || '--';
@@ -580,7 +568,7 @@ function updateEmotionDisplay(prefix, emotion, confidence, source) {
 function renderBars(containerId, scores, highlightEmotion) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const allEmotions = ['neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'];
+    const allEmotions = ['neutral', 'happy', 'sad', 'anger'];
     const data = allEmotions.map(e => ({ emotion: e, confidence: scores[e] || 0 }));
     const maxConf = Math.max(...data.map(d => d.confidence), 0.01);
 
@@ -786,7 +774,7 @@ function updateReplayChart(scores, highlight) {
         replayChart = createReplayChart('replay-chart');
         if (!replayChart) return;
     }
-    const allEmotions = ['neutral', 'happy', 'sad', 'anger', 'fear', 'surprise', 'disgust'];
+    const allEmotions = ['neutral', 'happy', 'sad', 'anger'];
     replayChart.data.datasets[0].data = allEmotions.map(e => scores[e] || 0);
     replayChart.data.datasets[0].backgroundColor = allEmotions.map(e =>
         e === highlight ? (EMOTION_COLORS[e] || '#666') : '#333'

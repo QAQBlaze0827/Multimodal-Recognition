@@ -184,17 +184,11 @@ data/datasets/fer/
     happy/
     sad/
     anger/
-    fear/
-    surprise/
-    disgust/
   val/
     neutral/
     happy/
     sad/
     anger/
-    fear/
-    surprise/
-    disgust/
 ```
 
 ## Docker

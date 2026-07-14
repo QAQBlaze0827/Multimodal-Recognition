@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 
-EMOTIONS = ("neutral", "happy", "sad", "anger", "fear", "surprise", "disgust")
+EMOTIONS = ("neutral", "happy", "sad", "anger")
 
 
 def build_parser() -> argparse.ArgumentParser:

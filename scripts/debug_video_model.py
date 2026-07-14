@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-EMOTIONS = ("neutral", "happy", "sad", "anger", "fear", "surprise", "disgust")
+EMOTIONS = ("neutral", "happy", "sad", "anger")
 MODEL_PATH = Path("models/mini_xception_fp32.onnx")
 
 

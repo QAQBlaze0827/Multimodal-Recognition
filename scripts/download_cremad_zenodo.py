@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 
 EMOTION_MAP = {
-    "ANG": "anger", "DIS": "disgust", "FEA": "fear",
+    "ANG": "anger",
     "HAP": "happy", "NEU": "neutral", "SAD": "sad",
 }
 

@@ -24,13 +24,7 @@ EMOTION_MAP = {
     "happy": "happy",
     "sad": "sad",
     "angry": "anger",
-    "fear": "fear",
-    "surprise": "surprise",
-    "disgust": "disgust",
     "calm": "neutral",
-    "pleasant_surprise": "surprise",
-    "pleasant_surprised": "surprise",
-    "ps": "surprise",
 }
 
 
@@ -78,7 +72,7 @@ def extract_ravdess(zip_path: Path, output_dir: Path) -> None:
             continue
         ravdess_map = {
             1: "neutral", 2: "calm", 3: "happy", 4: "sad",
-            5: "angry", 6: "fear", 7: "disgust", 8: "surprise",
+            5: "angry",
         }
         label = ravdess_map.get(emotion_code)
         if label is None:
@@ -155,10 +149,8 @@ def extract_tess(zip_path: Path, output_dir: Path) -> None:
         zf.extractall(extract_dir)
 
     tess_map = {
-        "angry": "angry", "disgust": "disgust", "fear": "fear",
+        "angry": "angry",
         "happy": "happy", "neutral": "neutral", "sad": "sad",
-        "pleasant_surprise": "pleasant_surprise",
-        "pleasant_surprised": "pleasant_surprised",
     }
 
     count = 0
