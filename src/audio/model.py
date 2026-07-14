@@ -17,6 +17,7 @@ class AudioEmotionModel:
         self._log_count = 0
         cal = calibration or {}
         self._neutral_logit_scale = float(cal.get("neutral_logit_scale", 1.0))
+        self._sad_logit_scale = float(cal.get("sad_logit_scale", 1.0))
         self._anger_logit_scale = float(cal.get("anger_logit_scale", 1.0))
         self._confidence_floor = float(cal.get("confidence_floor", 0.0))
         self._try_load_onnx()
@@ -34,6 +35,7 @@ class AudioEmotionModel:
             output = self.session.run(None, {self.input_name: tensor})[0]
             logits = np.asarray(output).reshape(-1)[: len(EMOTIONS)]
             logits[0] *= self._neutral_logit_scale
+            logits[2] *= self._sad_logit_scale
             logits[3] *= self._anger_logit_scale
             exp = np.exp(logits - np.max(logits))
             probs = exp / max(float(exp.sum()), 1e-8)
