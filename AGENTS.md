@@ -116,6 +116,10 @@ Multimodal-Recognition/
   - [x] 降低 temporal smoothing alpha（0.7→0.4）
   - [x] 加入高通濾波器（high-pass filter，去除低頻噪音）
   - [x] 調整 window_seconds（1.5→2.0）與 fusion min_confidence（0.1→0.3）
+- [x] **音訊延遲改善（Phase 5：非阻塞 InputStream + 重疊滑窗）**
+  - [x] 改用 sd.InputStream() 持續錄音 + ring buffer
+  - [x] 每 hop_seconds（0.5s）觸發一次推論
+  - [x] window_seconds 設回 1.5 匹配模型
 
 ## 音訊精度改善結果
 | Phase | 變更 | 訓練資料 | val_acc |

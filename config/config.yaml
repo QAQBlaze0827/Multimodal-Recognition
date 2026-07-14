@@ -22,7 +22,8 @@ audio:
   sample_rate: 16000
   chunk_size: 256
   device_id: -1
-  window_seconds: 2.0
+  window_seconds: 1.5
+  hop_seconds: 0.5
   vad_threshold: 0.02
   highpass_cutoff: 80
   mfcc:

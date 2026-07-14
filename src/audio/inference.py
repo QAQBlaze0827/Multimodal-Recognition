@@ -19,6 +19,9 @@ class AudioEmotionThread(threading.Thread):
         self.smooth_alpha = float(smoothing.get("alpha", 0.7)) if smoothing.get("enabled", True) else 0.0
         self._smoothed_scores: dict[str, float] | None = None
         self._vad_threshold = float(config.get("vad_threshold", 0.02))
+        self._hop_seconds = float(config.get("hop_seconds", 0.5))
+        self._ring_buffer = np.zeros(0, dtype=np.float32)
+        self._buffer_lock = threading.Lock()
 
     def run(self) -> None:
         try:
@@ -29,13 +32,30 @@ class AudioEmotionThread(threading.Thread):
 
         sample_rate = int(self.config["sample_rate"])
         window_seconds = float(self.config["window_seconds"])
-        frames = int(sample_rate * window_seconds)
+        window_frames = int(sample_rate * window_seconds)
         hp_cutoff = float(self.config.get("highpass_cutoff", 80))
 
+        def callback(indata, frames, time_info, status):
+            with self._buffer_lock:
+                self._ring_buffer = np.concatenate([self._ring_buffer, indata.reshape(-1)])
+                if len(self._ring_buffer) > window_frames:
+                    self._ring_buffer = self._ring_buffer[-window_frames:]
+
+        stream = sd.InputStream(
+            samplerate=sample_rate,
+            channels=1,
+            dtype="float32",
+            callback=callback,
+        )
+        stream.start()
+
         while not self.state.stop:
-            audio = sd.rec(frames, samplerate=sample_rate, channels=1, dtype="float32")
-            sd.wait()
-            samples = audio.reshape(-1)
+            sd.sleep(int(self._hop_seconds * 1000))
+
+            with self._buffer_lock:
+                if len(self._ring_buffer) < window_frames:
+                    continue
+                samples = self._ring_buffer.copy()
 
             peak = float(np.max(np.abs(samples)))
             if peak > 1e-8:
@@ -72,3 +92,5 @@ class AudioEmotionThread(threading.Thread):
 
             with self.state.lock:
                 self.state.audio = result
+
+        stream.stop()
