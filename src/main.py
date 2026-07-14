@@ -76,7 +76,7 @@ def run_video_loop(config: dict, args) -> None:
 
     audio_thread = None
     if not args.vision_only and config["audio"].get("enabled", True):
-        audio_model = AudioEmotionModel(config["audio"]["model"]["path"])
+        audio_model = AudioEmotionModel(config["audio"]["model"]["path"], config["audio"]["model"].get("calibration"))
         audio_thread = AudioEmotionThread(state, config["audio"], audio_model)
         audio_thread.start()
 
@@ -155,7 +155,7 @@ def run_video_loop(config: dict, args) -> None:
 
 def run_audio_only(config: dict) -> None:
     state = RuntimeState()
-    audio_model = AudioEmotionModel(config["audio"]["model"]["path"])
+    audio_model = AudioEmotionModel(config["audio"]["model"]["path"], config["audio"]["model"].get("calibration"))
     thread = AudioEmotionThread(state, config["audio"], audio_model)
     thread.start()
     print("[audio] audio-only mode. Press Ctrl+C to stop.")

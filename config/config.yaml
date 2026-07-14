@@ -33,6 +33,10 @@ audio:
     include_delta: false
   model:
     path: "models/tiny_cnn_audio_fp32.onnx"
+    calibration:
+      neutral_logit_scale: 1.4
+      anger_logit_scale: 0.6
+      confidence_floor: 0.35
   temporal_smoothing:
     enabled: true
     alpha: 0.4

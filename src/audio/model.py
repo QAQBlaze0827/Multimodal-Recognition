@@ -4,17 +4,21 @@ from pathlib import Path
 
 import numpy as np
 
-from src.shared_types import EMOTIONS, create_ort_session, make_result
+from src.shared_types import EMOTIONS, EmotionResult, create_ort_session, make_result
 
 
 class AudioEmotionModel:
-    def __init__(self, model_path: str) -> None:
+    def __init__(self, model_path: str, calibration: dict | None = None) -> None:
         self.model_path = Path(model_path)
         self.session = None
         self.input_name = ""
         self.backend = "heuristic"
         self._time_frames = 93
         self._log_count = 0
+        cal = calibration or {}
+        self._neutral_logit_scale = float(cal.get("neutral_logit_scale", 1.0))
+        self._anger_logit_scale = float(cal.get("anger_logit_scale", 1.0))
+        self._confidence_floor = float(cal.get("confidence_floor", 0.0))
         self._try_load_onnx()
 
     def predict(self, features: np.ndarray):
@@ -29,9 +33,14 @@ class AudioEmotionModel:
                 tensor = tensor[:, :, :target]
             output = self.session.run(None, {self.input_name: tensor})[0]
             logits = np.asarray(output).reshape(-1)[: len(EMOTIONS)]
+            logits[0] *= self._neutral_logit_scale
+            logits[3] *= self._anger_logit_scale
             exp = np.exp(logits - np.max(logits))
             probs = exp / max(float(exp.sum()), 1e-8)
-            result = make_result("audio", dict(zip(EMOTIONS, probs.tolist())))
+            if float(np.max(probs)) < self._confidence_floor:
+                result = EmotionResult.neutral("audio")
+            else:
+                result = make_result("audio", dict(zip(EMOTIONS, probs.tolist())))
             self._log_count += 1
             if self._log_count % 10 == 0:
                 scores_str = ", ".join(f"{k}:{v:.2f}" for k, v in result.scores.items())

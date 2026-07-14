@@ -120,6 +120,10 @@ Multimodal-Recognition/
   - [x] 改用 sd.InputStream() 持續錄音 + ring buffer
   - [x] 每 hop_seconds（0.5s）觸發一次推論
   - [x] window_seconds 設回 1.5 匹配模型
+- [x] **音訊 bias 修正（Phase 6：logit adjustment + confidence floor）**
+  - [x] 調降 anger logit 權重（×0.6）
+  - [x] 調升 neutral logit 權重（×1.4）
+  - [x] 加入 confidence floor（max(probs) < 0.35 時輸出 neutral）
 
 ## 音訊精度改善結果
 | Phase | 變更 | 訓練資料 | val_acc |
