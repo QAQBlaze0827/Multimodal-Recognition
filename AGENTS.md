@@ -110,6 +110,11 @@ Multimodal-Recognition/
 - [x] Web 前後端 + SQLite 資料庫（FastAPI + SPA + WebSocket 即時推送）
 - [x] 情緒類別 7→4 縮減：shared_types.py / 推論管線 / 前端 / 資料庫 / 訓練腳本
 - [ ] 在 Windows 本機 Python 執行 app.py 測試 webcam
+- [x] **音訊權重優化（Phase 7：face-gating + modality 權重調降）**
+  - [x] `config.yaml` 新增 `fusion.audio_weight`（0.5）、`fusion.neutral_penalty`（0.3）、`fusion.gate_audio_with_face`（true）
+  - [x] `late_fusion.py`：新增 `audio_weight` 全域調降語音信心度、`neutral_penalty` 對高信心 neutral 再折扣
+  - [x] `main.py`：人臉消失時將 `audio` 設為 None（face-gating），fusion 呼叫傳遞新參數
+  - [x] `display.py`：`draw_overlay` 新增 `audio_gated` 參數，顯示 `(gated)` 標記
 - [x] **音訊推論精度改善（Phase 4：inference 管線修正）**
   - [x] 推論前加入 peak normalization（matching training）
   - [x] 加入 voice activity detection（VAD，提高 energy threshold）
