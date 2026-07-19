@@ -32,6 +32,28 @@
   - 前端：charts.js / app.js / index.html / style.css 同步更新
   - 資料庫：舊資料清空，重新開始
   - 訓練腳本已同步更新，未來可重新訓練 4 類模型
+- **Raspberry Pi Camera 支援（branch: `feature/rpi-camera-support`）**
+  - 修改 `src/video/capture.py`
+  - 原本只使用 OpenCV `VideoCapture` 開啟相機
+  - 現在會先嘗試 OpenCV `VideoCapture`
+  - 若 OpenCV 無法讀取相機，會 fallback 到 `picamera2`
+  - Pi Camera 輸出格式指定為 `RGB888`，再轉成 OpenCV 使用的 BGR frame
+  - 已在 Raspberry Pi 5 + IMX708 Camera 上測試可成功讀取影像
+  - Raspberry Pi 上需使用 `python app.py --no-display`，避免 OpenCV `cv2.imshow()` GUI 錯誤
+
+- **Raspberry Pi MediaPipe 實測**
+  - Raspberry Pi 上未安裝 `mediapipe` 時，系統會 fallback 到 OpenCV Haar cascade
+  - 實測 Haar cascade 在 Pi Camera 上較不穩，`face_detected` 可能持續為 `0`
+  - 在 Raspberry Pi 的 `.venv` 手動安裝 `mediapipe` 後，video emotion 開始正常產生資料
+  - `mediapipe` 尚未加入 `requirements_rpi.txt`，後續需確認是否要納入 RPi 安裝依賴
+
+- **INMP441 / Google voiceHAT 音訊聲道實測**
+  - Raspberry Pi 上音訊裝置顯示為 `snd_rpi_googlevoicehat_soundcar`，sounddevice device id 為 `0`
+  - 硬體實際格式為 `S32_LE`、`2 channels`、`48000 Hz`
+  - 實測左聲道可清楚收到人聲，右聲道為雜訊
+  - 右聲道資料包含大量 32-bit 極值，例如 `-2147483648`
+  - 因此後續音訊接收應指定 device、讀取雙聲道、只取左聲道，避免右聲道雜訊進入模型
+  - 目前建議設定方向：`device_id: 0`、`channels: 2`、`channel_select: left`、`input_sample_rate: 48000`、`sample_rate: 16000`
 
 ## 專案結構
 ```

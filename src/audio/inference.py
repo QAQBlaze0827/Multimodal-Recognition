@@ -31,19 +31,35 @@ class AudioEmotionThread(threading.Thread):
             return
 
         sample_rate = int(self.config["sample_rate"])
+        input_sample_rate = int(self.config.get("input_sample_rate", sample_rate))
         window_seconds = float(self.config["window_seconds"])
         window_frames = int(sample_rate * window_seconds)
         hp_cutoff = float(self.config.get("highpass_cutoff", 80))
+        device_id = int(self.config.get("device_id", -1))
+        channels = int(self.config.get("channels", 1))
+        channel_select = str(self.config.get("channel_select", "mono")).lower()
+        device = None if device_id < 0 else device_id
 
         def callback(indata, frames, time_info, status):
+            if indata.ndim == 2 and indata.shape[1] > 1:
+                if channel_select == "right":
+                    chunk = indata[:, 1]
+                elif channel_select == "mix":
+                    chunk = np.mean(indata, axis=1)
+                else:
+                    chunk = indata[:, 0]
+            else:
+                chunk = indata.reshape(-1)
+
             with self._buffer_lock:
-                self._ring_buffer = np.concatenate([self._ring_buffer, indata.reshape(-1)])
+                self._ring_buffer = np.concatenate([self._ring_buffer, chunk.astype(np.float32).reshape(-1)])
                 if len(self._ring_buffer) > window_frames:
                     self._ring_buffer = self._ring_buffer[-window_frames:]
 
         stream = sd.InputStream(
-            samplerate=sample_rate,
-            channels=1,
+            samplerate=input_sample_rate,
+            channels=channels,
+            device=device,
             dtype="float32",
             callback=callback,
         )
@@ -56,6 +72,10 @@ class AudioEmotionThread(threading.Thread):
                 if len(self._ring_buffer) < window_frames:
                     continue
                 samples = self._ring_buffer.copy()
+
+            if input_sample_rate != sample_rate:
+                ratio = input_sample_rate // sample_rate
+                samples = samples[::ratio]
 
             peak = float(np.max(np.abs(samples)))
             if peak > 1e-8:

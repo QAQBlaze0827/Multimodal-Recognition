@@ -20,8 +20,11 @@ video:
 audio:
   enabled: true
   sample_rate: 16000
+  input_sample_rate: 48000
   chunk_size: 256
-  device_id: -1
+  device_id: 0
+  channels: 2
+  channel_select: left
   window_seconds: 1.5
   hop_seconds: 0.5
   vad_threshold: 0.02
