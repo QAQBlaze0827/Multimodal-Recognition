@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def draw_overlay(cv2, frame, video_result, audio_result, fused_result, fps: float, temp: float | None) -> None:
+def draw_overlay(cv2, frame, video_result, audio_result, fused_result, fps: float, temp: float | None, audio_gated: bool = False) -> None:
     face_status = "NO"
     face_backend = "none"
     face_bbox = "-"
@@ -14,10 +14,13 @@ def draw_overlay(cv2, frame, video_result, audio_result, fused_result, fps: floa
         label = f"{video_result.emotion.label} {video_result.emotion.confidence:.2f}"
         cv2.putText(frame, label, (x, max(20, y - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 0), 2)
 
+    audio_display = "(gated)" if audio_gated else (
+        f"{audio_result.label} {audio_result.confidence:.2f}" if audio_result else "none"
+    )
     rows = [
         f"Face: {face_status} [{face_backend}] bbox={face_bbox}",
         f"Video: {video_result.emotion.label} {video_result.emotion.confidence:.2f} [{video_result.model_backend}]",
-        f"Audio: {(audio_result.label if audio_result else 'none')} {(audio_result.confidence if audio_result else 0):.2f}",
+        f"Audio: {audio_display}",
         f"Fused: {fused_result.label} {fused_result.confidence:.2f}",
         f"FPS: {fps:.1f} | Temp: {temp:.1f}C" if temp is not None else f"FPS: {fps:.1f} | Temp: n/a",
         "press q to quit",

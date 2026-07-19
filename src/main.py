@@ -111,10 +111,19 @@ def run_video_loop(config: dict, args) -> None:
             result = video_pipeline.process(frame)
             with state.lock:
                 audio = state.audio
+
+            audio_gated = False
+            if config.get("audio", {}).get("gate_with_face", True) and result.face is None:
+                if audio is not None:
+                    audio_gated = True
+                audio = None
+
             fused = confidence_weighted_fusion(
                 result.emotion,
                 audio,
                 min_confidence=float(config["fusion"]["min_confidence"]),
+                audio_weight=float(config["fusion"].get("audio_weight", 0.5)),
+                neutral_penalty=float(config["fusion"].get("neutral_penalty", 0.3)),
             )
 
             frame_count += 1
@@ -132,7 +141,7 @@ def run_video_loop(config: dict, args) -> None:
                 db_logger.write(result, audio, fused, fps, temp)
 
             if display:
-                draw_overlay(cv2, frame, result, audio, fused, fps, temp)
+                draw_overlay(cv2, frame, result, audio, fused, fps, temp, audio_gated)
                 cv2.imshow("Multimodal Emotion Recognition", frame)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
