@@ -33,7 +33,7 @@ class AudioEmotionThread(threading.Thread):
         sample_rate = int(self.config["sample_rate"])
         input_sample_rate = int(self.config.get("input_sample_rate", sample_rate))
         window_seconds = float(self.config["window_seconds"])
-        window_frames = int(sample_rate * window_seconds)
+        window_frames = int(input_sample_rate * window_seconds)
         hp_cutoff = float(self.config.get("highpass_cutoff", 80))
         device_id = int(self.config.get("device_id", -1))
         channels = int(self.config.get("channels", 1))
