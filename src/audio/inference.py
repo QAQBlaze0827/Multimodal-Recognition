@@ -57,16 +57,16 @@ class AudioEmotionThread(threading.Thread):
                     continue
                 samples = self._ring_buffer.copy()
 
-            peak = float(np.max(np.abs(samples)))
-            if peak > 1e-8:
-                samples = samples / peak
-
             rms = float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
             if rms < self._vad_threshold:
                 with self.state.lock:
                     self.state.audio = None
                 self._smoothed_scores = None
                 continue
+
+            peak = float(np.max(np.abs(samples)))
+            if peak > 1e-8:
+                samples = samples / peak
 
             samples = highpass_filter(samples, sample_rate=sample_rate, cutoff_hz=hp_cutoff)
 

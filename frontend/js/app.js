@@ -26,6 +26,8 @@ const UI_TEXT = {
         waitingData: '等待資料',
         startPrompt: '啟動辨識程式後，這裡會顯示即時情緒狀態。',
         noSignal: '尚無訊號',
+        noAudioLabel: '--',
+        noAudioSignal: '尚無語音訊號',
         noTrend: '尚無趨勢',
         fused: '綜合結果',
         video: '臉部表情',
@@ -90,6 +92,8 @@ const UI_TEXT = {
         waitingData: 'Waiting for data',
         startPrompt: 'Start the recognition process to see live emotion feedback.',
         noSignal: 'No signal',
+        noAudioLabel: '--',
+        noAudioSignal: 'No audio signal',
         noTrend: 'No trend yet',
         fused: 'Fused',
         video: 'Video',
@@ -365,7 +369,7 @@ function updateSignalQuality(data) {
     if (face) face.textContent = data.face_detected ? `已偵測（${data.face_backend || 'camera'}）` : '未偵測到臉部';
     if (audio) {
         const conf = Number(data.audio_conf || 0);
-        audio.textContent = data.audio_emotion ? `${formatEmotion(data.audio_emotion)} ${Math.round(conf * 100)}%` : '尚無音訊訊號';
+        audio.textContent = hasAudioSignal(data) ? `${formatEmotion(data.audio_emotion)} ${Math.round(conf * 100)}%` : tr('noAudioSignal');
     }
     if (agreement) agreement.textContent = agreementLabel(data);
 }
@@ -463,7 +467,7 @@ function confidenceLevelKey(confidence) {
 
 function agreementLabel(data) {
     const video = data.video_emotion;
-    const audio = data.audio_emotion;
+    const audio = hasAudioSignal(data) ? data.audio_emotion : '';
     if (currentLang === 'en') {
         if (!video && !audio) return 'No signal yet';
         if (!audio) return 'Video is the main signal';
@@ -559,10 +563,21 @@ function updateEmotionDisplay(prefix, emotion, confidence, source) {
     const confEl = document.getElementById(`${prefix}-conf`);
     const srcEl = document.getElementById(`${prefix}-src`);
     if (!labelEl) return;
+    if (prefix === 'audio' && (!emotion || emotion === '-' || Number(confidence || 0) <= 0)) {
+        labelEl.textContent = tr('noAudioLabel');
+        labelEl.style.color = '#77778a';
+        if (confEl) confEl.textContent = '--';
+        if (srcEl) srcEl.textContent = source;
+        return;
+    }
     labelEl.textContent = formatEmotion(emotion);
     labelEl.style.color = EMOTION_COLORS[emotion] || '#e8eaed';
     if (confEl) confEl.textContent = `${(confidence * 100).toFixed(0)}%`;
     if (srcEl) srcEl.textContent = source;
+}
+
+function hasAudioSignal(data) {
+    return Boolean(data.audio_emotion) && Number(data.audio_conf || 0) > 0;
 }
 
 function renderBars(containerId, scores, highlightEmotion) {
