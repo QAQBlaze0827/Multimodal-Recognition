@@ -1,0 +1,229 @@
+{
+  "data_dir": "data\\datasets\\emotiontalk_clean",
+  "total_samples": 8,
+  "models": [
+    {
+      "name": "smoke_mfcc",
+      "kind": "mfcc",
+      "path": "models\\tiny_cnn_audio_fp32.onnx",
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "total": 8,
+      "confusion": [
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          1,
+          0,
+          1
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ]
+      ],
+      "prediction_counts": {
+        "sad": 1,
+        "happy": 4,
+        "anger": 3
+      },
+      "per_class": {
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        },
+        "anger": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      },
+      "mistake_examples": [
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0098.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.6963297724723816
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0859.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.9982901215553284
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\happy\\emotiontalk_clean_happy_0480.wav",
+          "true": "happy",
+          "pred": "anger",
+          "confidence": 0.9502944946289062
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\happy\\emotiontalk_clean_happy_0486.wav",
+          "true": "happy",
+          "pred": "anger",
+          "confidence": 0.113870769739151
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\sad\\emotiontalk_clean_sad_0095.wav",
+          "true": "sad",
+          "pred": "happy",
+          "confidence": 3.3145804536616197e-06
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\sad\\emotiontalk_clean_sad_0774.wav",
+          "true": "sad",
+          "pred": "anger",
+          "confidence": 0.45426061749458313
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\anger\\emotiontalk_clean_anger_0104.wav",
+          "true": "anger",
+          "pred": "happy",
+          "confidence": 0.9926005005836487
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\anger\\emotiontalk_clean_anger_0584.wav",
+          "true": "anger",
+          "pred": "happy",
+          "confidence": 0.8124580383300781
+        }
+      ]
+    },
+    {
+      "name": "smoke_mel",
+      "kind": "mel",
+      "path": "models\\audio_emotiontalk_mel_cnn_fp32.onnx",
+      "accuracy": 0.125,
+      "macro_f1": 0.08333333333333333,
+      "total": 8,
+      "confusion": [
+        [
+          1,
+          1,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ]
+      ],
+      "prediction_counts": {
+        "happy": 4,
+        "neutral": 4
+      },
+      "per_class": {
+        "neutral": {
+          "precision": 0.25,
+          "recall": 0.5,
+          "f1": 0.3333333333333333,
+          "support": 2
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        },
+        "anger": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      },
+      "mistake_examples": [
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0098.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.4696851074695587
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\happy\\emotiontalk_clean_happy_0480.wav",
+          "true": "happy",
+          "pred": "neutral",
+          "confidence": 0.40585002303123474
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\happy\\emotiontalk_clean_happy_0486.wav",
+          "true": "happy",
+          "pred": "neutral",
+          "confidence": 0.5104573369026184
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\sad\\emotiontalk_clean_sad_0095.wav",
+          "true": "sad",
+          "pred": "neutral",
+          "confidence": 0.3668247163295746
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\sad\\emotiontalk_clean_sad_0774.wav",
+          "true": "sad",
+          "pred": "happy",
+          "confidence": 0.4214034974575043
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\anger\\emotiontalk_clean_anger_0104.wav",
+          "true": "anger",
+          "pred": "happy",
+          "confidence": 0.3724346458911896
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\anger\\emotiontalk_clean_anger_0584.wav",
+          "true": "anger",
+          "pred": "happy",
+          "confidence": 0.42446690797805786
+        }
+      ]
+    }
+  ]
+}

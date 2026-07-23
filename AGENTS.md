@@ -195,7 +195,7 @@ Multimodal-Recognition/
 | Phase C | EmotionTalk-only + class_weight | emotiontalk 19,250 | best 51.66%, final 50.83% |
 | Phase C | EmotionTalk-clean + log-mel 2D CNN | emotiontalk clean 4,440 | best 54.20%, final 52.40% |
 
-**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 與 EmotionTalk-clean log-mel CNN 均低於既有 RAVDESS+TESS 模型，暫不建議直接替換目前 `config.yaml` 使用的音訊模型；若要提升中文語音情緒辨識，下一步應改用 pretrained speech encoder 或重新設計切片/標註策略。
+**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 與 EmotionTalk-clean log-mel CNN 訓練 val_acc 均低於既有 RAVDESS+TESS 模型，因此不能只憑訓練結果直接判定正式取代原模型。不過完整診斷報告顯示 `emotiontalk_mfcc` 在 `emotiontalk_clean` 上 accuracy 0.6435、macro F1 0.6447，是目前中文 clean set 表現最好的音訊模型；它可以作為實機中文語音測試候選，但仍需要用真實麥克風情境驗證。若實機效果仍不足，下一步應改用 pretrained speech encoder 或重新設計切片/標註策略。
 
 ## WSL 開發環境
 ```bash

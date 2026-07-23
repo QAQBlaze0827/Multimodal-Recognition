@@ -6,6 +6,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 data/logs/*.csv
+data/logs/*.log
 data/*.db
 data/*.db-wal
 data/*.db-shm

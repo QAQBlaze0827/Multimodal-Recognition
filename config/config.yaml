@@ -32,7 +32,7 @@ audio:
     hop_length: 256
     include_delta: false
   model:
-    path: "models/tiny_cnn_audio_fp32.onnx"
+    path: "models/tiny_cnn_audio_emotiontalk_fp32.onnx"
     calibration:
       neutral_logit_scale: 1.0
       sad_logit_scale: 1.0

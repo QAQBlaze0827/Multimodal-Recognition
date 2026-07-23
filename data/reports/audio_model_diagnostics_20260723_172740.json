@@ -1,0 +1,570 @@
+{
+  "data_dir": "data\\datasets\\emotiontalk_clean",
+  "total_samples": 4440,
+  "models": [
+    {
+      "name": "current_mfcc",
+      "kind": "mfcc",
+      "path": "models\\tiny_cnn_audio_fp32.onnx",
+      "accuracy": 0.2472972972972973,
+      "macro_f1": 0.19242454880434434,
+      "total": 4440,
+      "confusion": [
+        [
+          28,
+          347,
+          69,
+          666
+        ],
+        [
+          4,
+          502,
+          98,
+          506
+        ],
+        [
+          15,
+          418,
+          53,
+          624
+        ],
+        [
+          15,
+          552,
+          28,
+          515
+        ]
+      ],
+      "prediction_counts": {
+        "happy": 1819,
+        "anger": 2311,
+        "sad": 248,
+        "neutral": 62
+      },
+      "per_class": {
+        "neutral": {
+          "precision": 0.45161290322580644,
+          "recall": 0.025225225225225224,
+          "f1": 0.0477815699658703,
+          "support": 1110
+        },
+        "happy": {
+          "precision": 0.2759758108851017,
+          "recall": 0.45225225225225224,
+          "f1": 0.3427791054967566,
+          "support": 1110
+        },
+        "sad": {
+          "precision": 0.21370967741935484,
+          "recall": 0.047747747747747746,
+          "f1": 0.0780559646539028,
+          "support": 1110
+        },
+        "anger": {
+          "precision": 0.22284725227174385,
+          "recall": 0.46396396396396394,
+          "f1": 0.3010815551008477,
+          "support": 1110
+        }
+      },
+      "mistake_examples": [
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0000.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5720745921134949
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0001.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.9931566119194031
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0002.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.9208062887191772
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0003.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.7861824035644531
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0004.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.7655011415481567
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0005.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.8726575374603271
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0006.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.9939026832580566
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0007.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.325774222612381
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0008.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.9774361252784729
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0009.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.14679723978042603
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0010.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.028001708909869194
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0011.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 8.817851266940124e-06
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0012.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.6476307511329651
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0013.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.8888645172119141
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0014.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.4426630437374115
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0015.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.018044287338852882
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0016.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.9949630498886108
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0017.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.9868964552879333
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0018.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.015751369297504425
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0019.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.727355420589447
+        }
+      ]
+    },
+    {
+      "name": "emotiontalk_mfcc",
+      "kind": "mfcc",
+      "path": "models\\tiny_cnn_audio_emotiontalk_fp32.onnx",
+      "accuracy": 0.6434684684684685,
+      "macro_f1": 0.6447287958628564,
+      "total": 4440,
+      "confusion": [
+        [
+          697,
+          164,
+          77,
+          172
+        ],
+        [
+          234,
+          556,
+          32,
+          288
+        ],
+        [
+          131,
+          47,
+          869,
+          63
+        ],
+        [
+          175,
+          173,
+          27,
+          735
+        ]
+      ],
+      "prediction_counts": {
+        "anger": 1258,
+        "happy": 940,
+        "neutral": 1237,
+        "sad": 1005
+      },
+      "per_class": {
+        "neutral": {
+          "precision": 0.5634599838318513,
+          "recall": 0.627927927927928,
+          "f1": 0.593949723050703,
+          "support": 1110
+        },
+        "happy": {
+          "precision": 0.5914893617021276,
+          "recall": 0.5009009009009009,
+          "f1": 0.5424390243902438,
+          "support": 1110
+        },
+        "sad": {
+          "precision": 0.8646766169154229,
+          "recall": 0.7828828828828829,
+          "f1": 0.8217494089834516,
+          "support": 1110
+        },
+        "anger": {
+          "precision": 0.5842607313195548,
+          "recall": 0.6621621621621622,
+          "f1": 0.620777027027027,
+          "support": 1110
+        }
+      },
+      "mistake_examples": [
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0000.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.4368375837802887
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0001.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5517613887786865
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0002.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.71591717004776
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0003.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.3759746551513672
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0006.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.5283643007278442
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0010.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.4212987720966339
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0011.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.39775165915489197
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0017.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.3897143006324768
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0018.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5141794681549072
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0020.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.361187219619751
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0021.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.39312565326690674
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0024.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.7844412326812744
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0025.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5065213441848755
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0026.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.4511638283729553
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0033.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.39798665046691895
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0036.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.35457760095596313
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0038.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.7545977234840393
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0040.wav",
+          "true": "neutral",
+          "pred": "anger",
+          "confidence": 0.4537905156612396
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0045.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.4772959053516388
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0046.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5396780371665955
+        }
+      ]
+    },
+    {
+      "name": "emotiontalk_mel_cnn",
+      "kind": "mel",
+      "path": "models\\audio_emotiontalk_mel_cnn_fp32.onnx",
+      "accuracy": 0.5049549549549549,
+      "macro_f1": 0.4752125264664812,
+      "total": 4440,
+      "confusion": [
+        [
+          724,
+          239,
+          141,
+          6
+        ],
+        [
+          326,
+          694,
+          83,
+          7
+        ],
+        [
+          254,
+          156,
+          694,
+          6
+        ],
+        [
+          247,
+          687,
+          46,
+          130
+        ]
+      ],
+      "prediction_counts": {
+        "sad": 964,
+        "happy": 1776,
+        "neutral": 1551,
+        "anger": 149
+      },
+      "per_class": {
+        "neutral": {
+          "precision": 0.46679561573178596,
+          "recall": 0.6522522522522523,
+          "f1": 0.5441563322059376,
+          "support": 1110
+        },
+        "happy": {
+          "precision": 0.39076576576576577,
+          "recall": 0.6252252252252253,
+          "f1": 0.480942480942481,
+          "support": 1110
+        },
+        "sad": {
+          "precision": 0.7199170124481328,
+          "recall": 0.6252252252252253,
+          "f1": 0.66923818707811,
+          "support": 1110
+        },
+        "anger": {
+          "precision": 0.87248322147651,
+          "recall": 0.11711711711711711,
+          "f1": 0.20651310563939634,
+          "support": 1110
+        }
+      },
+      "mistake_examples": [
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0000.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.3348326086997986
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0001.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.34373950958251953
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0002.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.48570892214775085
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0003.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.6174219250679016
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0004.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.46580740809440613
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0006.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.3906958997249603
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0016.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.5509030818939209
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0017.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.5391789078712463
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0020.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.36652541160583496
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0021.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.3469863533973694
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0022.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.41956835985183716
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0023.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.443036824464798
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0026.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.40227219462394714
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0030.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.3690144419670105
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0031.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.4589948356151581
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0036.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.785243570804596
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0038.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.851748526096344
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0042.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.5804482102394104
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0046.wav",
+          "true": "neutral",
+          "pred": "happy",
+          "confidence": 0.4502464234828949
+        },
+        {
+          "file": "data\\datasets\\emotiontalk_clean\\neutral\\emotiontalk_clean_neutral_0047.wav",
+          "true": "neutral",
+          "pred": "sad",
+          "confidence": 0.4380187690258026
+        }
+      ]
+    }
+  ]
+}
