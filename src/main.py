@@ -113,7 +113,7 @@ def run_video_loop(config: dict, args) -> None:
                 audio = state.audio
 
             audio_gated = False
-            if config.get("audio", {}).get("gate_with_face", True) and result.face is None:
+            if config.get("fusion", {}).get("gate_audio_with_face", True) and result.face is None:
                 if audio is not None:
                     audio_gated = True
                 audio = None

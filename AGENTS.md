@@ -131,21 +131,37 @@ Multimodal-Recognition/
   - [x] 加入 confidence floor（max(probs) < 0.35 時輸出 neutral）
   - [x] VAD 未通過時 state.audio = None，避免舊 neutral 持續扭曲 fusion
   - [x] 加入 sad logit 加權（×1.5），改善 sad 被 neutral 壓制的問題
-- [ ] **Phase A：修復 `gate_audio_with_face` config 讀取錯誤**
-  - [ ] `src/main.py`：`config.get("audio", {}).get("gate_with_face", True)` → `config.get("fusion", {}).get("gate_audio_with_face", True)`
-- [ ] **Phase B：調降音訊推論超參數，讓真實語音更容易被辨識**
-  - [ ] `config.yaml`：`audio_weight` 0.5 → 0.8，`neutral_penalty` 0.3 → 0.5
-  - [ ] `config.yaml`：`confidence_floor` 0.35 → 0.20
-  - [ ] `config.yaml`：`sad_logit_scale` 1.5 → 1.0，`anger_logit_scale` 0.6 → 0.8
-  - [ ] `config.yaml`：`temporal_smoothing.alpha` 0.4 → 0.7
-  - [ ] `config.yaml`：`vad_threshold` 0.02 → 0.01
+- [x] **Phase A：修復 `gate_audio_with_face` config 讀取錯誤**
+  - [x] `src/main.py`：`config.get("audio", {}).get("gate_with_face", True)` → `config.get("fusion", {}).get("gate_audio_with_face", True)`
+- [x] **Phase B：調降音訊推論超參數，讓真實語音更容易被辨識**
+  - [x] `config.yaml`：`audio_weight` 0.5 → 0.8，`neutral_penalty` 0.3 → 0.5
+  - [x] `config.yaml`：`confidence_floor` 0.35 → 0.20
+  - [x] `config.yaml`：`sad_logit_scale` 1.5 → 1.0，`anger_logit_scale` 0.6 → 0.8
+  - [x] `config.yaml`：`temporal_smoothing.alpha` 0.4 → 0.7
+  - [x] `config.yaml`：`vad_threshold` 0.02 → 0.01
 - [ ] **Phase C：下載 EmotionTalk 中文語音資料集並重新訓練**
-  - [ ] 建立 `scripts/download_emotiontalk.py`：從 HuggingFace 下載 EmotionTalk（需 huggingface_hub + 同意 CC BY-NC-SA 4.0）
-  - [ ] 建立 `scripts/prepare_emotiontalk.py`：
+  - [x] `requirements_train.txt` 新增 `huggingface_hub`，供 HuggingFace gated dataset 下載使用
+  - [x] 建立 `scripts/download_emotiontalk.py`：從 HuggingFace 下載 EmotionTalk `Audio.tar`（需登入並同意 CC BY-NC-SA 4.0）
+  - [x] 建立 `scripts/prepare_emotiontalk.py`：
     - 從 .tar 中解出 audio WAV（44.1kHz → 16kHz resample）
-    - 7 類情緒（happy/surprise/sad/disgust/anger/fear/neutral）映射到 4 類（neutral/happy/sad/anger）
+    - 7 類情緒映射到 4 類：neutral→neutral、happy/surprise→happy、sad→sad、anger/disgust/fear→anger
     - 輸出到 `data/datasets/emotiontalk/{neutral,happy,sad,anger}/`
-  - [ ] 執行 `train_audio_tiny_cnn.py` 合併訓練（emotiontalk + ravdess + tess），加入 class_weight 處理類別不平衡
+  - [x] `train_audio_tiny_cnn.py` 新增 `--class-weight`，支援依類別數量反向加權
+  - [x] Windows `.venv` 已安裝 `requirements_train.txt` 訓練依賴，可執行 EmotionTalk 下載與音訊模型訓練
+  - [x] Hugging Face 權限檢查：目前 `.venv` 尚未登入或設定 token，因此 EmotionTalk 下載尚未開始
+  - [x] Hugging Face 已登入並確認帳號 `QAQBlaze`，可繼續嘗試 gated dataset 下載
+  - [x] `hf_hub_download` 下載嘗試未實際寫入大檔，已停止程序並保留 `data/datasets/emotiontalk_raw*` cache/lock 檔，未刪除任何資料
+  - [x] 建立 `scripts/download_emotiontalk_stream.py`：支援續傳下載，先寫入 `Audio.tar.download`，完成後才改名為 `Audio.tar`
+  - [x] 已下載 EmotionTalk `Audio.tar` 到 `data/datasets/emotiontalk_raw_stream/Audio.tar`，檔案大小 14,811,722,752 bytes
+  - [x] 已整理 EmotionTalk 到 `data/datasets/emotiontalk/`，共 19,250 筆：neutral 9,378、happy 3,468、sad 1,110、anger 5,294，skipped 0
+  - [x] 本機目前沒有 `data/datasets/audio/ravdess` 或 `tess` WAV；且既有下載腳本會刪除 `_extracted` 暫存資料夾，因此先不執行 RAVDESS/TESS 補下載
+  - [x] 第一次 EmotionTalk-only 訓練未開始即失敗：TensorFlow import 時被 `.venv` 內既有 `jax` / `ml_dtypes` 版本衝突中斷
+  - [x] `train_audio_tiny_cnn.py` 在 import TensorFlow 前遮蔽 optional `jax` 匯入，避免不需要的 JAX 相依影響訓練
+  - [x] 先執行 EmotionTalk-only 訓練，輸出新模型檔，不覆蓋既有 `tiny_cnn_audio_fp32.onnx`
+    - FP32：`models/tiny_cnn_audio_emotiontalk_fp32.onnx`，ONNX Runtime 與 `AudioEmotionModel` 載入成功
+    - INT8：`models/tiny_cnn_audio_emotiontalk_int8.onnx` 已輸出，但 CPUExecutionProvider 無法執行 `ConvInteger`，不建議使用
+    - 訓練結果：50 epochs，best val_accuracy 0.5166，final val_accuracy 0.5083
+  - [ ] 執行 `train_audio_tiny_cnn.py` 合併訓練（emotiontalk + ravdess + tess），使用 `--class-weight` 處理類別不平衡
   - [ ] 用真實語音測試新模型效果
 
 ## 音訊精度改善結果
@@ -158,8 +174,9 @@ Multimodal-Recognition/
 | Phase 3 | N_MFCC=26 + delta + Conv1D 64→64 + Dense 128 + Dropout 0.5+L2 | ravdess+tess 4,240 | 54% |
 | Phase 3 | N_MFCC=26 + Conv1D 64→64 + Dense 128 + Dropout 0.3 | ravdess+tess 4,240 | 52% |
 | Phase 3 | N_MFCC=13 + Conv1D 32→64 + Dense 64 + Dropout 0.3 | ravdess+tess 4,240 | 54% |
+| Phase C | EmotionTalk-only + class_weight | emotiontalk 19,250 | best 51.66%, final 50.83% |
 
-**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。
+**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 訓練結果低於既有 RAVDESS+TESS 模型，暫不建議直接替換目前 `config.yaml` 使用的音訊模型。
 
 ## WSL 開發環境
 ```bash

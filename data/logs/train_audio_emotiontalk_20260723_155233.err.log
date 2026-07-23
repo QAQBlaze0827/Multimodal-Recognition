@@ -1,0 +1,40 @@
+2026-07-23 15:52:34.800858: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-07-23 15:52:37.440730: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Traceback (most recent call last):
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\scripts\train_audio_tiny_cnn.py", line 307, in <module>
+    main()
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\scripts\train_audio_tiny_cnn.py", line 250, in main
+    import tensorflow as tf
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\__init__.py", line 51, in <module>
+    from tensorflow._api.v2 import compat
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\__init__.py", line 8, in <module>
+    from tensorflow._api.v2.compat import v1
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\__init__.py", line 30, in <module>
+    from tensorflow._api.v2.compat.v1 import compat
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\compat\__init__.py", line 8, in <module>
+    from tensorflow._api.v2.compat.v1.compat import v1
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\compat\v1\__init__.py", line 47, in <module>
+    from tensorflow._api.v2.compat.v1 import lite
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\lite\__init__.py", line 9, in <module>
+    from tensorflow._api.v2.compat.v1.lite import experimental
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\lite\experimental\__init__.py", line 8, in <module>
+    from tensorflow._api.v2.compat.v1.lite.experimental import authoring
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\_api\v2\compat\v1\lite\experimental\authoring\__init__.py", line 8, in <module>
+    from tensorflow.lite.python.authoring.authoring import compatible # line: 265
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\lite\python\authoring\authoring.py", line 43, in <module>
+    from tensorflow.lite.python import convert
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\lite\python\convert.py", line 30, in <module>
+    from tensorflow.lite.python import util
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tensorflow\lite\python\util.py", line 51, in <module>
+    from jax import xla_computation as _xla_computation
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\jax\__init__.py", line 37, in <module>
+    import jax.core as _core
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\jax\core.py", line 18, in <module>
+    from jax._src.core import (
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\jax\_src\core.py", line 38, in <module>
+    from jax._src import dtypes
+  File "C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\jax\_src\dtypes.py", line 94, in <module>
+    float8_e3m4: type[np.generic] = ml_dtypes.float8_e3m4
+                                    ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'ml_dtypes' has no attribute 'float8_e3m4'. Did you mean: 'float8_e5m2'?

@@ -1,0 +1,15 @@
+2026-07-23 15:54:04.848070: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-07-23 15:54:06.169034: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING:tensorflow:From C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tf2onnx\tf_loader.py:68: The name tf.reset_default_graph is deprecated. Please use tf.compat.v1.reset_default_graph instead.
+
+WARNING:tensorflow:From C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\tf2onnx\tf_loader.py:72: The name tf.train.import_meta_graph is deprecated. Please use tf.compat.v1.train.import_meta_graph instead.
+
+2026-07-23 16:08:10.995713: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+C:\Users\QAQBl\OneDrive\桌面\大學的學習歷程\大三\下學期\專題\Multimodal-Recognition\.venv\Lib\site-packages\keras\src\trainers\epoch_iterator.py:74: UserWarning: `shuffle=True` was passed, but will be ignored since the data `x` was provided as a tf.data.Dataset. The Dataset is expected to already be shuffled (via `.shuffle(buffer_size)`).
+  self.data_adapter = data_adapters.get_data_adapter(
+2026-07-23 16:13:45.676876: I tensorflow/core/grappler/devices.cc:75] Number of eligible GPUs (core count >= 8, compute capability >= 0.0): 0 (Note: TensorFlow was not compiled with CUDA or ROCm support)
+2026-07-23 16:13:45.677697: I tensorflow/core/grappler/clusters/single_machine.cc:361] Starting new session
+2026-07-23 16:13:45.838778: I tensorflow/core/grappler/devices.cc:75] Number of eligible GPUs (core count >= 8, compute capability >= 0.0): 0 (Note: TensorFlow was not compiled with CUDA or ROCm support)
+2026-07-23 16:13:45.839407: I tensorflow/core/grappler/clusters/single_machine.cc:361] Starting new session
+WARNING:root:Please consider to run pre-processing before quantization. Refer to example: https://github.com/microsoft/onnxruntime-inference-examples/blob/main/quantization/image_classification/cpu/ReadMe.md 

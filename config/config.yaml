@@ -24,7 +24,7 @@ audio:
   device_id: -1
   window_seconds: 1.5
   hop_seconds: 0.5
-  vad_threshold: 0.02
+  vad_threshold: 0.01
   highpass_cutoff: 80
   mfcc:
     n_mfcc: 13
@@ -35,20 +35,20 @@ audio:
     path: "models/tiny_cnn_audio_fp32.onnx"
     calibration:
       neutral_logit_scale: 1.0
-      sad_logit_scale: 1.5
-      anger_logit_scale: 0.6
-      confidence_floor: 0.35
+      sad_logit_scale: 1.0
+      anger_logit_scale: 0.8
+      confidence_floor: 0.20
   temporal_smoothing:
     enabled: true
-    alpha: 0.4
+    alpha: 0.7
 
 fusion:
   method: "confidence_weighted"
   fallback_emotion: "neutral"
   min_confidence: 0.3
   gate_audio_with_face: true
-  audio_weight: 0.5
-  neutral_penalty: 0.3
+  audio_weight: 0.8
+  neutral_penalty: 0.5
 
 output:
   display:

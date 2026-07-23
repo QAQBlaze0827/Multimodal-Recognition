@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import random
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--val-split", type=float, default=0.15)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--class-weight", action="store_true",
+                        help="Weight classes inversely by frequency during training.")
     return parser
 
 
@@ -220,6 +223,17 @@ def build_model(tf, input_shape: tuple[int, int], learning_rate: float):
     return model
 
 
+def compute_class_weight(samples_list: list[tuple[np.ndarray, int]]) -> dict[int, float]:
+    labels = [label_idx for _, label_idx in samples_list]
+    counts = np.bincount(labels, minlength=len(EMOTIONS))
+    total = int(counts.sum())
+    weights = {}
+    for label_idx, count in enumerate(counts):
+        if count > 0:
+            weights[label_idx] = total / (len(EMOTIONS) * int(count))
+    return weights
+
+
 def quantize_onnx(fp32_output: Path, int8_output: Path) -> None:
     from onnxruntime.quantization import QuantType, quantize_dynamic
 
@@ -233,6 +247,8 @@ def quantize_onnx(fp32_output: Path, int8_output: Path) -> None:
 def main() -> None:
     args = build_parser().parse_args()
     data_dirs = [Path(d) for d in args.data_dir]
+
+    sys.modules["jax"] = None
 
     import tensorflow as tf
     import tf2onnx
@@ -267,7 +283,16 @@ def main() -> None:
             monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1
         ),
     ]
-    model.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
+    class_weight = compute_class_weight(train_samples) if args.class_weight else None
+    if class_weight:
+        print(f"[train] Class weights: {class_weight}")
+    model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=args.epochs,
+        callbacks=callbacks,
+        class_weight=class_weight,
+    )
 
     fp32_output = Path(args.fp32_output)
     fp32_output.parent.mkdir(parents=True, exist_ok=True)
