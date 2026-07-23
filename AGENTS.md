@@ -131,6 +131,22 @@ Multimodal-Recognition/
   - [x] 加入 confidence floor（max(probs) < 0.35 時輸出 neutral）
   - [x] VAD 未通過時 state.audio = None，避免舊 neutral 持續扭曲 fusion
   - [x] 加入 sad logit 加權（×1.5），改善 sad 被 neutral 壓制的問題
+- [ ] **Phase A：修復 `gate_audio_with_face` config 讀取錯誤**
+  - [ ] `src/main.py`：`config.get("audio", {}).get("gate_with_face", True)` → `config.get("fusion", {}).get("gate_audio_with_face", True)`
+- [ ] **Phase B：調降音訊推論超參數，讓真實語音更容易被辨識**
+  - [ ] `config.yaml`：`audio_weight` 0.5 → 0.8，`neutral_penalty` 0.3 → 0.5
+  - [ ] `config.yaml`：`confidence_floor` 0.35 → 0.20
+  - [ ] `config.yaml`：`sad_logit_scale` 1.5 → 1.0，`anger_logit_scale` 0.6 → 0.8
+  - [ ] `config.yaml`：`temporal_smoothing.alpha` 0.4 → 0.7
+  - [ ] `config.yaml`：`vad_threshold` 0.02 → 0.01
+- [ ] **Phase C：下載 EmotionTalk 中文語音資料集並重新訓練**
+  - [ ] 建立 `scripts/download_emotiontalk.py`：從 HuggingFace 下載 EmotionTalk（需 huggingface_hub + 同意 CC BY-NC-SA 4.0）
+  - [ ] 建立 `scripts/prepare_emotiontalk.py`：
+    - 從 .tar 中解出 audio WAV（44.1kHz → 16kHz resample）
+    - 7 類情緒（happy/surprise/sad/disgust/anger/fear/neutral）映射到 4 類（neutral/happy/sad/anger）
+    - 輸出到 `data/datasets/emotiontalk/{neutral,happy,sad,anger}/`
+  - [ ] 執行 `train_audio_tiny_cnn.py` 合併訓練（emotiontalk + ravdess + tess），加入 class_weight 處理類別不平衡
+  - [ ] 用真實語音測試新模型效果
 
 ## 音訊精度改善結果
 | Phase | 變更 | 訓練資料 | val_acc |
