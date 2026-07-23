@@ -161,6 +161,24 @@ Multimodal-Recognition/
     - FP32：`models/tiny_cnn_audio_emotiontalk_fp32.onnx`，ONNX Runtime 與 `AudioEmotionModel` 載入成功
     - INT8：`models/tiny_cnn_audio_emotiontalk_int8.onnx` 已輸出，但 CPUExecutionProvider 無法執行 `ConvInteger`，不建議使用
     - 訓練結果：50 epochs，best val_accuracy 0.5166，final val_accuracy 0.5083
+  - [x] 建立 `scripts/prepare_emotiontalk_clean.py`：只保留原始 `neutral/happy/sad/angry`，排除 `surprised/disgusted/fearful`，支援每類 balanced 輸出
+  - [x] 建立 `scripts/train_audio_emotiontalk_mel_cnn.py`：使用 2 秒 log-mel spectrogram + 2D CNN 訓練 EmotionTalk 專用 FP32 ONNX
+  - [x] 產生 `data/datasets/emotiontalk_clean/` balanced clean 訓練資料，每類 1,110 筆，共 4,440 筆，skipped 0
+  - [x] 第一次 log-mel CNN 訓練在 `spec_augment` shape 處理失敗，已修正 2D log-mel mask 邏輯，未產生半成品模型
+  - [x] 訓練 `models/audio_emotiontalk_mel_cnn_fp32.onnx`，不覆蓋既有音訊模型
+    - 使用 `data/datasets/emotiontalk_clean/` 4,440 筆 balanced clean 資料
+    - EarlyStopping 於 epoch 22 停止，還原 best epoch 12
+    - best val_accuracy 0.5420，final val_accuracy 0.5240
+    - ONNX Runtime 載入成功，輸入 shape `(1, 64, 122, 1)`，輸出 shape `(1, 4)`
+  - [x] 建立 `scripts/evaluate_audio_models.py`：比較 MFCC 與 log-mel 音訊模型，輸出 accuracy、macro F1、confusion matrix、各類 precision/recall/F1、預測分布與錯誤範例
+    - 補上 repo root 到 `sys.path`，確保直接執行 `python scripts/evaluate_audio_models.py` 可匯入 `src`
+    - MFCC 模型評估時會 pad/truncate 到 93 frames，對齊正式 `AudioEmotionModel` 推論行為
+  - [x] 執行模型診斷，輸出報告：
+    - Markdown：`data/reports/audio_model_diagnostics_20260723_172740.md`
+    - JSON：`data/reports/audio_model_diagnostics_20260723_172740.json`
+    - `current_mfcc`：accuracy 0.2473，macro F1 0.1924，在 EmotionTalk clean 上幾乎不可用
+    - `emotiontalk_mfcc`：accuracy 0.6435，macro F1 0.6447，是目前 clean set 表現最好的音訊模型
+    - `emotiontalk_mel_cnn`：accuracy 0.5050，macro F1 0.4752，主要問題是 anger recall 僅 0.1171，幾乎不預測 anger
   - [ ] 執行 `train_audio_tiny_cnn.py` 合併訓練（emotiontalk + ravdess + tess），使用 `--class-weight` 處理類別不平衡
   - [ ] 用真實語音測試新模型效果
 
@@ -175,8 +193,9 @@ Multimodal-Recognition/
 | Phase 3 | N_MFCC=26 + Conv1D 64→64 + Dense 128 + Dropout 0.3 | ravdess+tess 4,240 | 52% |
 | Phase 3 | N_MFCC=13 + Conv1D 32→64 + Dense 64 + Dropout 0.3 | ravdess+tess 4,240 | 54% |
 | Phase C | EmotionTalk-only + class_weight | emotiontalk 19,250 | best 51.66%, final 50.83% |
+| Phase C | EmotionTalk-clean + log-mel 2D CNN | emotiontalk clean 4,440 | best 54.20%, final 52.40% |
 
-**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 訓練結果低於既有 RAVDESS+TESS 模型，暫不建議直接替換目前 `config.yaml` 使用的音訊模型。
+**結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 與 EmotionTalk-clean log-mel CNN 均低於既有 RAVDESS+TESS 模型，暫不建議直接替換目前 `config.yaml` 使用的音訊模型；若要提升中文語音情緒辨識，下一步應改用 pretrained speech encoder 或重新設計切片/標註策略。
 
 ## WSL 開發環境
 ```bash
