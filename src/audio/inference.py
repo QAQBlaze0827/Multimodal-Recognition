@@ -101,6 +101,12 @@ class AudioEmotionThread(threading.Thread):
             )
             result = self.model.predict(features)
 
+            if result.confidence <= 0.0:
+                self._smoothed_scores = None
+                with self.state.lock:
+                    self.state.audio = None
+                continue
+
             if self.smooth_alpha > 0:
                 if self._smoothed_scores is None:
                     self._smoothed_scores = dict(result.scores)
