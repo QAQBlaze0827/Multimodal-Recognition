@@ -1,0 +1,73 @@
+{
+  "status": "decoded_review_required",
+  "manifest_sha256": {
+    "train.csv": "af9dcccde1c48958f235dc0cf636ff8a2872138a416e21c977d02a165baa3143",
+    "val.csv": "4789fed0992c9db39a89b8624cdda61547e0b4d583578ac8d164e4ca4a6c2ffe",
+    "test.csv": "f4e8295ed3a4cdc9f1441dd5311f88221003207dcc9459c733872fce7696a7b4"
+  },
+  "decoded": 16413,
+  "splits": {
+    "train": {
+      "decoded": 11714,
+      "formats": {
+        "44100Hz/2ch": 11605,
+        "44100Hz/1ch": 97,
+        "16000Hz/1ch": 12
+      },
+      "mean_duration_seconds": 4.478804109140099,
+      "median_duration_seconds": 3.667743764172336,
+      "shorter_than_1_5s": 2177,
+      "longer_than_1_5s": 9535,
+      "full_scale_over_0_1_percent": 0,
+      "channel_imbalance": 0,
+      "mono_cancellation": 0,
+      "exact_silence": 0,
+      "low_whole_clip_rms": 81,
+      "identical_stereo_channels": 9890
+    },
+    "val": {
+      "decoded": 2194,
+      "formats": {
+        "44100Hz/2ch": 2152,
+        "44100Hz/1ch": 42
+      },
+      "mean_duration_seconds": 4.605895040483528,
+      "median_duration_seconds": 3.8327551020408164,
+      "shorter_than_1_5s": 401,
+      "longer_than_1_5s": 1793,
+      "full_scale_over_0_1_percent": 0,
+      "channel_imbalance": 0,
+      "mono_cancellation": 0,
+      "exact_silence": 0,
+      "low_whole_clip_rms": 10,
+      "identical_stereo_channels": 1438
+    },
+    "test": {
+      "decoded": 2505,
+      "formats": {
+        "44100Hz/2ch": 2104,
+        "16000Hz/1ch": 99,
+        "44100Hz/1ch": 302
+      },
+      "mean_duration_seconds": 4.034336154448473,
+      "median_duration_seconds": 3.12140589569161,
+      "shorter_than_1_5s": 537,
+      "longer_than_1_5s": 1968,
+      "full_scale_over_0_1_percent": 0,
+      "channel_imbalance": 0,
+      "mono_cancellation": 0,
+      "exact_silence": 0,
+      "low_whole_clip_rms": 22,
+      "identical_stereo_channels": 0
+    }
+  },
+  "errors": [],
+  "exact_duplicate_groups": [],
+  "limits": [
+    "No perceptual/near-duplicate detection",
+    "No microphone recording or listening test",
+    "No model training or accuracy evaluation"
+  ],
+  "archive_path": "C:\\Users\\QAQBl\\OneDrive\\桌面\\大學的學習歷程\\大三\\下學期\\專題\\Multimodal-Recognition\\data\\datasets\\emotiontalk_raw_stream\\Audio.tar",
+  "expected": 16413
+}
