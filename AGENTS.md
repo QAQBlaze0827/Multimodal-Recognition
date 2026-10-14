@@ -257,6 +257,22 @@ Multimodal-Recognition/
 - 後續仍需將 train/val/test 清單接入訓練與評估，保留來源／說話者切分，再按原錄音彙整窗口預測；這些不是本次已完成的功能。整段無有效窗口時應另外記錄拒判及覆蓋率，不能靜默剔除驗證／測試樣本以提高分數。短片段繼承整段情緒標籤的適切性及真人麥克風效果仍待驗證。
 - 本次未重訓、未改正式推論／config／模型、未刪除或覆蓋既有資料，未執行 git add、commit 或 push。
 
+## EmotionTalk 清單式訓練入口與小規模試跑（2026-10-15）
+- 新增 `scripts/train_audio_emotiontalk_manifest.py`，接入既有四類清單與 `src/audio/preprocessing.py`，沿用 `train_audio_tiny_cnn.build_model()` 的 Tiny CNN 架構與 `(13,93)` 輸入，不改舊訓練入口或正式辨識流程。電腦負責訓練，ONNX 候選格式供後續電腦與樹莓派共同使用；本次沒有測試樹莓派或宣稱兩平台部署完成。
+- 讀取完整 train/val/test CSV 檢查集合重疊並記錄 SHA-256；只選取 train/val 音訊，不解碼 test，不重新隨機分組。選中樣本另比對原始標註 SHA-256、情緒、speaker_id、來源路徑及固定組別分配；WAV 完整解碼並比對格式／長度，保留 PCM SHA-256。原始 tar 只讀，不解壓寫回。
+- 預設為小規模試跑：train 與 val 各類最多 8 筆（各 32 筆）、seed=42、batch size=16、2 epochs、learning rate=0.001。抽樣不移動集合，限制為 0 時才使用完整 train/val 自然分布；本次未執行完整資料訓練。
+- 每個 epoch 對每筆 train 重新隨機切一個窗口，VAD 未通過不進入梯度更新，但保留於當輪 crop CSV；若任何類別沒有有效窗口則停止，不能假裝 neutral。類別權重只依當輪有效 train 窗口數反向計算。不沿用舊腳本的音量、雜訊或 SpecAugment，這次只以隨機切片建立基準。
+- val 使用固定窗口，平均同一原始錄音的有效窗口機率後判斷一個情緒，不讓長錄音因窗口多而增加評分權重。整段無有效窗口保留為 abstain，計入 accuracy 分母與該類 recall 的漏判；回報 coverage、拒判數、四類 precision/recall/F1、macro-F1 與含 abstain 欄的 4×5 confusion matrix。每輪僅依 val 的錄音層級 macro-F1 選最佳權重，不依 test 選模型。
+- 每次建立新輸出目錄，拒絕覆蓋；保留 `selected_records.csv`、`preprocessing.json`、`run_config.json`、每輪 train crop CSV／評估 JSON、`val_audio.csv`、`val_predictions.json`、`result.json` 與 FP32 ONNX。僅在全部完成後寫入 `result.json`；缺少此檔表示該次未完成。小規模模型命名為 `smoke_only.onnx`，不可作為正式辨識模型。
+- ONNX 用 `tf2onnx.convert.from_function()` 匯出以配合目前 Keras 3；重新載入 ONNX Runtime CPUExecutionProvider，與 TensorFlow 的同批真實特徵輸出比對（rtol=1e-4、atol=1e-5）。不產生舊環境無法執行 ConvInteger 的 INT8 模型。
+- 初次 `models/emotiontalk_manifest_smoke_20261015_v1/` 在訓練前失敗：舊式 `sys.modules['jax']=None` workaround 影響 SciPy 1.17.1 的 array backend 檢查。改為僅在 TensorFlow/Keras 初始化期間暫時遮蔽，之後還原 sys.modules；未更換依賴版本。v1 的三份前置紀錄保留，未刪除，沒有模型或完成結果。
+- 第二次 `models/emotiontalk_manifest_smoke_20261015_v2/` 完成：32 train／32 val，2 epochs；每輪 31 個 train 窗口有效、1 個未過 VAD；val 共 320 個有效窗口，32 筆錄音皆有預測。選中 epoch 2，小樣本 val accuracy=0.34375、macro-F1=0.245798、coverage=1.0；這些僅是試跑數字，不能當正式模型準確率或與舊模型比較。
+- v2 的 ONNX 為 106,880 bytes，8 個真實特徵窗口的匯出比對最大絕對差約 3.28e-7。另以既有 `AudioEmotionModel` 測試 50／93／120 格合成特徵，載入、補齊／截短及四類機率輸出正常；沒有修改 config 指向此測試模型。
+- 新增 `tests/test_emotiontalk_training.py` 的 13 項測試：固定集合／可重現抽樣、自然分布、test 擋入訓練／選模、來源核對、靜音保留與缺類停止、逐錄音平均、拒判分母與 F1、錯誤機率、train 類別權重。`python -B -m unittest discover -s tests -v` 共 46 項通過。另讀回試跑結果重算指標、檢查 train/val 說話者不重疊、來源清單 SHA-256 不變、相同輸出目錄重跑拒絕且產物雜湊不變；舊 models 根目錄檔案雜湊全部不變。
+- 重現小規模試跑（專案根目錄，啟用既有 Python 環境）：`python scripts/train_audio_emotiontalk_manifest.py --epochs 2 --limit-per-class 8`，會建立新的時間戳目錄；不要重用 v1/v2 位置，也不要刪除它們以便重跑。測試指令為 `python -B -m unittest discover -s tests -v`。
+- 後續才考慮完整 train/val 訓練（`--limit-per-class 0`，另確認 epoch 數與 CPU 時間），再另行接入最終 test 評估及真人收音驗證。目前沒有 test 評估入口、沒有正式準確率，也沒有自動接管 PC/RPi 推論；試跑的 JSON 不等於可部署的合格證明。
+- 未修改 `config/config.yaml`、`src/audio/inference.py`、前端或舊模型；保留原始資料與失敗試跑紀錄，未執行 git add、commit 或 push。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）
