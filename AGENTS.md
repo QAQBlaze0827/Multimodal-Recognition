@@ -197,6 +197,39 @@ Multimodal-Recognition/
 
 **結論**：Phase 2 為最佳配置（N_MFCC=13, Conv1D 32→64, Dense 64, Dropout 0.3, augment=True），另外 CREMA-D 資料集與 RAVDESS/TESS 不相容導致 val_acc 雪崩，已排除。Phase 3 所有嘗試均無正向效果。Phase C 的 EmotionTalk-only 與 EmotionTalk-clean log-mel CNN 訓練 val_acc 均低於既有 RAVDESS+TESS 模型，因此不能只憑訓練結果直接判定正式取代原模型。不過完整診斷報告顯示 `emotiontalk_mfcc` 在 `emotiontalk_clean` 上 accuracy 0.6435、macro F1 0.6447，是目前中文 clean set 表現最好的音訊模型；它可以作為實機中文語音測試候選，但仍需要用真實麥克風情境驗證。若實機效果仍不足，下一步應改用 pretrained speech encoder 或重新設計切片/標註策略。
 
+## 音訊推論修正（2026-10-13）
+- 修正 `src/audio/model.py` 重複 softmax：目前 EmotionTalk 與舊版 MFCC FP32 ONNX 的輸出已是 softmax 機率，推論端不應再次取 exp，否則會壓縮各類分數差距。
+- 改為複製模型輸出的前四類機率，套用既有類別權重後除以總和。保留 `neutral_logit_scale`、`sad_logit_scale`、`anger_logit_scale` 設定名稱以相容現有配置；此處實際調整的是機率權重，不是 logits。
+- 保留 confidence floor 的既有行為：低於門檻時回傳 confidence=0 的 neutral fallback。未修改模型檔、訓練方式、麥克風設定、時間平滑、融合邏輯或前端。
+- 新增 `tests/test_audio_model.py`，涵蓋原始機率保留、類別加權正規化、高信心度通過門檻、低信心度 fallback、舊版七類輸出保留四類後正規化；亦檢查不修改原始輸出陣列。
+- 本機 `.venv` 驗證通過：
+  - `python -m unittest discover -s tests -v`：5 項測試通過。
+  - `python -m py_compile src/audio/model.py tests/test_audio_model.py`：語法檢查通過。
+  - 載入 `tiny_cnn_audio_emotiontalk_fp32.onnx` 與 `tiny_cnn_audio_fp32.onnx`，確認末端為 Softmax；分別以不加權／目前 config 權重及 50、93、120 格合成特徵測試，共 12 組 ONNX 推論比對通過，包含補齊與截短路徑。
+- 驗證限制：合成特徵僅驗證推論計算，並非準確率測試；尚未測試真人麥克風、樹莓派或完整前端流程。後續可執行 `python app.py --audio-only` 做實機測試；完整程式會沿用既有日誌與資料保留設定。
+- 行為影響：信心度不再被重複 softmax 壓縮，可能改變融合權重及門檻判斷；分數升高不代表準確率提高。未加權時最高分類不因移除 softmax 改變；目前配置仍會對 anger 乘以 0.8，時間平滑也會影響即時畫面的分數。
+- Git：本次僅修改工作目錄，未執行 git add、commit 或 push。
+
+## EmotionTalk 四類資料清單與切分（2026-10-14）
+- 在現有 repo 新增 `scripts/prepare_emotiontalk_manifests.py`，只讀取原始 `data/datasets/emotiontalk_raw_stream/Audio.tar`，產生清單與檢查報告，不解壓、刪除、轉檔或訓練。只需 Python 標準函式庫。
+- 保留 Audio 標註原始四類：neutral 9,378、happy 2,105、sad 1,110、angry 3,820，合計 16,413 筆；angry 僅統一命名為 anger。其餘 2,837 筆不列入新清單，原始資料仍保留。
+- 清單保留 archive 內 WAV/JSON 路徑、原始標籤、speaker_id、錄音組別、對話來源、時間、WAV 格式、標註票數與 JSON SHA-256；不包含逐字稿。SHA-256 僅針對個別標註，未計算整份 archive 或音訊內容雜湊。
+- 使用固定自訂切分 `emotiontalk-audio-four-class-speaker-disjoint-v1`，不是官方切分。依上一輪盤點的共用說話者關係綁定來源組別，再將其分配為接近 70/15/15 的比例；未使用模型測試分數挑選組別。
+  - train：G00002、G00004 至 G00011、G00015；11,714 筆，11 位說話者，71.37%。
+  - val：G00001、G00003、G00012；2,194 筆，4 位說話者，13.37%。
+  - test：G00013、G00014；2,505 筆，4 位說話者，15.26%。
+  - 類別順序固定為 neutral / happy / sad / anger；三組數量依序為 train 6729/1533/779/2673、val 1148/287/152/607、test 1501/285/179/540。
+- 檢查跨集合 speaker_id、組別、對話來源與 WAV 路徑沒有重疊；說話者檢查包含被排除情緒的原始標註。缺 WAV、重複 archive 路徑、不明標籤、不明組別、無效來源／時間或缺少任一類時停止，不輸出成功清單。
+- 少於 4 位標註者同意最終標籤的 606 筆標為 `review_recommended`（train 414、val 100、test 92），尚未人工審核，不自動排除。
+- 本次輸出：`data/reports/emotiontalk_four_class_20261014_v1/`，內含 `train.csv`、`val.csv`、`test.csv`、`summary.json`、中文 `report.md`。CSV 路徑指向 tar 內的原始資料，不是已解壓路徑。
+- 執行方式（專案根目錄，已啟用 Python 3.11 環境）：
+  - `python scripts/prepare_emotiontalk_manifests.py`：每次建立新的時間戳輸出資料夾，不覆蓋舊結果。
+  - `python scripts/prepare_emotiontalk_manifests.py --output data/reports/emotiontalk_four_class_20261014_v1`：本次使用的固定輸出位置；已存在，重跑會拒絕覆蓋。
+  - 可用 `--input` 指定原始 Audio.tar；無需重新下載資料。不要因重跑被拒絕而刪除既有輸出，改用新的輸出位置即可。
+- 驗證：新增 `tests/test_emotiontalk_manifests.py` 的 7 項記憶體內 tar 測試（不建立或清除測試音檔），連同既有音訊測試共 12 項通過。實際 archive 掃描及產出成功，另獨立讀回 CSV 核對 16,413 筆、各類數量及 12 組跨集合重疊檢查；重跑覆蓋拒絕測試通過，原輸出雜湊不變。
+- 限制與下一步：未完整解碼、聽音或檢查相同音訊內容，不以 speaker_id 之外的方式驗證身分。現有訓練腳本尚未接入清單；後續先規劃切片、聲道、重取樣及特徵一致性，再決定模型與訓練。類別自然分布不平衡，後續在訓練集處理，不改測試集來提高成績。舊模型可能看過本次 test 來源，不能據此宣稱公平的未見資料比較；真人耳機測試仍待進行。
+- 本次未修改正式推論或模型，保留前次未提交的 softmax 修正；未新增 repo、未執行 git add、commit 或 push。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）

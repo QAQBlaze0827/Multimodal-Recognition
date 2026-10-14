@@ -33,12 +33,12 @@ class AudioEmotionModel:
             elif curr_frames > target:
                 tensor = tensor[:, :, :target]
             output = self.session.run(None, {self.input_name: tensor})[0]
-            logits = np.asarray(output).reshape(-1)[: len(EMOTIONS)]
-            logits[0] *= self._neutral_logit_scale
-            logits[2] *= self._sad_logit_scale
-            logits[3] *= self._anger_logit_scale
-            exp = np.exp(logits - np.max(logits))
-            probs = exp / max(float(exp.sum()), 1e-8)
+            # Audio ONNX models already output softmax probabilities.
+            probs = np.asarray(output).reshape(-1)[: len(EMOTIONS)].copy()
+            probs[0] *= self._neutral_logit_scale
+            probs[2] *= self._sad_logit_scale
+            probs[3] *= self._anger_logit_scale
+            probs = probs / max(float(probs.sum()), 1e-8)
             if float(np.max(probs)) < self._confidence_floor:
                 result = EmotionResult.neutral("audio")
             else:
