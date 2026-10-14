@@ -244,6 +244,19 @@ Multimodal-Recognition/
 - 限制：未檢查近似重複、重取樣後重複或片段重疊，未聽音、測試真人麥克風或評估準確率。舊模型可能見過本次 test 來源，仍不能宣稱公平的新舊模型未見資料比較。
 - 本次未修改正式推論、設定、模型或既有資料清單；未執行 git add、commit 或 push。
 
+## EmotionTalk 前處理基準模組（2026-10-14）
+- 新增 `src/audio/preprocessing.py`，作為後續 Tiny CNN 訓練／評估可共用的候選前處理。尚未接入訓練腳本或 `src/audio/inference.py`，目前 `python app.py` 的行為不變，也尚未產生新模型。
+- `to_mono_16k()` 接受浮點音訊（單聲道或 frames × 1/2 聲道），以左右算術平均轉單聲道，再以 `scipy.signal.resample_poly` 帶抗混疊濾波重取樣為 16 kHz；不使用直接每隔三點取樣。拒絕空資料、非有限值、整數 PCM 與不支援的形狀，避免把原始整數誤當正規化音訊。
+- 本次平均聲道規則用於 EmotionTalk 資料，不代表 INMP441 應混合左右聲道。樹莓派若仍有單邊雜訊，須在擷取端先選取有效聲道，再傳入單聲道音訊；未修改麥克風擷取或裝置設定。
+- 窗口固定 1.5 秒（24,000 點）：`training_window()` 使用呼叫端提供的 NumPy RNG，從單筆錄音均勻隨機取一個窗口，不再永遠只取開頭；`evaluation_windows()` 固定每 0.5 秒取窗並包含末尾，不重複加入整齊對齊的尾窗。短錄音右側補零至 1.5 秒，保留原始來源不寫回音檔。
+- `window_features()` 沿用目前配置的順序：補齊後原始 RMS VAD（0.01）→ peak normalization → 80 Hz 高通 → 共用 `src/audio/features.py` 的 MFCC（13 維、FFT 512、hop 256、40 mel、無 delta）。1.5 秒實際得到 92 格 MFCC，右側補零至既有 Tiny CNN 輸入的 `(13, 93)`。未通過 VAD 回傳 `(None, rms)`，不捏造 neutral，也不刪除錄音。
+- `preprocessing_spec()` 回傳版本 `emotiontalk-mfcc-v1` 的規格與 neutral/happy/sad/anger 類別順序，供未來隨新模型保存；本次未修改現有模型規格檔。這是 Tiny CNN 基準，不是已選定更大型或預訓練模型。
+- `requirements_train.txt` 明列直接使用的 `scipy>=1.10,<2`；本機已有 SciPy 1.17.1，未安裝或升級套件。尚未將 SciPy 加入正式 PC/RPi 執行依賴，因為目前正式推論未呼叫此模組。
+- 新增 `tests/test_audio_preprocessing.py` 的 13 項測試，涵蓋混音、44.1/48 kHz 重取樣長度、12 kHz 訊號降採樣的抗混疊、來源不變、輸入檢查、固定／隨機切片、短音補零、靜音先攔截、與目前推論特徵及模型補齊的計算比對。執行 `python -B -m unittest discover -s tests -v`，全專案 33 項測試通過。
+- 真實資料抽測只使用 train：取每類第一筆、44.1 kHz 單聲道／16 kHz 單聲道、短於 1.5 秒及低整段 RMS 的第一筆，去重後共 7 筆。原始 tar 只讀、記憶體內解碼，隨機窗口 seed=42；共 27 個有效評估窗口通過有限值與 `(13,93)` 檢查並可送入既有 EmotionTalk MFCC ONNX，1 個窗口未通過 VAD。未計算準確率，亦未使用 val/test 調參或產生轉檔資料。
+- 後續仍需將 train/val/test 清單接入訓練與評估，保留來源／說話者切分，再按原錄音彙整窗口預測；這些不是本次已完成的功能。整段無有效窗口時應另外記錄拒判及覆蓋率，不能靜默剔除驗證／測試樣本以提高分數。短片段繼承整段情緒標籤的適切性及真人麥克風效果仍待驗證。
+- 本次未重訓、未改正式推論／config／模型、未刪除或覆蓋既有資料，未執行 git add、commit 或 push。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）
