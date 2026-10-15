@@ -287,6 +287,29 @@ Multimodal-Recognition/
 - 另確認修改前既有 models 目錄內的 27 個檔案雜湊均不變（包含舊模型、先前試跑與中止紀錄）、三份來源清單 SHA-256 不變，重用新試跑輸出位置會拒絕且產物雜湊不變。沒有刪除資料、安裝套件或執行 git add／commit／push。
 - 未自動重跑 30 epochs，未增加中斷續訓。使用者準備好後仍可自行執行 `python scripts/train_audio_emotiontalk_manifest.py --epochs 30 --limit-per-class 0`，會從頭訓練並建立新目錄，不會接續中止那次。保持電腦開機、不休眠，依新的階段與筆數觀察進度；完整訓練耗時和實機準確率仍待驗證。
 
+## EmotionTalk 完整訓練執行（2026-10-15）
+- 使用者授權由助理執行完整 30 epochs：`python -B scripts/train_audio_emotiontalk_manifest.py --epochs 30 --limit-per-class 0 --output-dir models/emotiontalk_manifest_train_20261015_full_v1`。新目錄拒絕覆蓋既有資料；不接續先前中止的訓練。
+- 啟動前 51 項單元測試通過，確認沒有其他 Python 訓練程序；保留既有模型檔案雜湊供完成後檢查。
+- 使用既有 speaker-disjoint train 11,714／val 2,194，依 val recording macro-F1 選最佳 epoch，不解碼 test 音訊。沿用前處理 v1.1 與 Tiny CNN，不修改正式推論、config 或資料清單。
+- 已完成 30 epochs，程序 exit code 0，`result.json` 狀態為 `complete`。檔案時間為台灣時間 14:26:35 至 17:27:18，牆鐘時間約 3 小時 43 秒，包含中途停頓，不能當成純運算耗時或其他電腦的時間保證。
+- 驗證特徵準備 206.1 秒，共 16,766 個有效窗口；每輪重新切片／讀取／計算 train 特徵，通常約 295～339 秒，模型擬合約 1～3 秒。第一輪 train 11,446 個有效窗口；最後一輪 11,451 個有效、263 個未過 VAD。沒有變更切片策略、訓練參數或增加 checkpoint。
+- 第 25 輪期間等待工具連線逾時，重連後確認原 Python PID 32884 仍在且進度繼續，沒有重開訓練；該輪特徵準備 elapsed=1397.1 秒。未查閱 Windows 電源事件，因此不斷言停頓一定由休眠造成。使用者詢問帶走電腦時，僅以 `powercfg /a` 確認支援休眠，沒有修改電源設定或代為執行休眠／關機。
+- 最佳選模輪次為第 30 輪：val recording accuracy **0.475843（47.58%）**、macro-F1 **0.408865**、coverage **0.992707**；2,194 筆中有 16 筆整段無有效窗口，仍計入 accuracy 分母及 recall 漏判。第 13 輪曾為最佳（accuracy=0.465816、macro-F1=0.408482），最後僅小幅超過，不能宣稱明顯改善。
+- 最終各類指標如下，全部為驗證集錄音層級，非 test 或耳機／樹莓派實測：
+
+  | 類別 | Precision | Recall | F1 | 筆數 |
+  |---|---:|---:|---:|---:|
+  | neutral | 78.88% | 50.44% | 0.6153 | 1,148 |
+  | happy | 23.76% | 38.33% | 0.2933 | 287 |
+  | sad | 18.93% | 42.11% | 0.2612 | 152 |
+  | anger | 45.26% | 47.94% | 0.4656 | 607 |
+
+- 驗證集全部猜 neutral 的 accuracy 基準為 52.32%，高於本次總 accuracy，但這種基準完全辨識不到其他三類，因此同時保留 macro-F1 與逐類指標。新模型 happy／sad precision 仍低，不應當成可靠四類辨識模型，也沒有證據顯示能取代舊模型；本次音檔驗證不經過真人麥克風，不能把這些誤判歸因於使用者耳機收音。原因仍需後續診斷，不能保證多跑 epochs 就會改善。
+- 模型輸出 `models/emotiontalk_manifest_train_20261015_full_v1/model.onnx`（106,903 bytes），輸入 `[batch,13,93]`、輸出 `[batch,4]`，前處理 `emotiontalk-mfcc-v1.1`。SHA-256：`82fd30e480aabdde1eb719f5a7b1f80e47ad88abe4bdb336a0a3cc352d08ad1b`。8 個真實 val 特徵窗口的 TensorFlow／ONNX 最大機率絕對差為 3.8743e-7；匯出有 TensorFlow deprecated API 警告，但完成且數值比對通過。
+- 完成後獨立讀回 2,194 筆 `val_predictions.json`，重算混淆矩陣、accuracy、逐類 F1 與 macro-F1；核對全部 30 份 epoch JSON、30 份 train crop CSV 的筆數與有效數、最佳輪次、三份來源 manifest SHA-256 及新模型 SHA-256，均通過。既有 `AudioEmotionModel` 載入新模型，50／93／120 格合成特徵的補齊／截短及四類輸出通過；這些相容性檢查不是實機準確率測試。
+- `git diff HEAD -- models config src scripts tests` 無差異，原有已追蹤模型／程式／設定未改；兩個既有完成試跑模型也通過其原始 `result.json` SHA-256 核對。工具重連導致啟動前暫存在工具記憶體的全檔雜湊快照遺失，因此未宣稱已完成所有未追蹤舊檔的前後雜湊比對。沒有刪除原始資料、舊模型或任何試跑／中止目錄。
+- 本次只新增完整訓練輸出並更新本節，未修改正式推論或 config 指向；未使用 test 音訊、未測真人麥克風／樹莓派、未執行 git add、commit 或 push。下一步先分析錯誤與模型／輸入限制，不因訓練流程成功就自動部署；若要再長時間訓練，應先另行加入可驗證的 checkpoint／續訓能力。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）
