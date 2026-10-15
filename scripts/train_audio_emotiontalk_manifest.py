@@ -7,6 +7,7 @@ import io
 import json
 import sys
 import tarfile
+import time
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,6 +24,18 @@ from scripts.train_audio_tiny_cnn import build_model
 from src.audio.preprocessing import (
     evaluation_windows, preprocessing_spec, to_mono_16k, training_window, window_features,
 )
+
+
+def progress(items, stage: str):
+    started = last_update = time.perf_counter()
+    total = len(items)
+    print(f"[train] {stage}: 0/{total}; elapsed=0.0s", flush=True)
+    for index, item in enumerate(items):
+        yield index, item
+        now = time.perf_counter()
+        if now - last_update >= 5.0 or index + 1 == total:
+            print(f"[train] {stage}: {index + 1}/{total}; elapsed={now - started:.1f}s", flush=True)
+            last_update = now
 
 
 def select_records(records: list[dict], split: str, limit: int, seed: int) -> list[dict]:
@@ -75,7 +88,7 @@ def load_recording(tar, row: dict) -> tuple[np.ndarray, str]:
 def training_arrays(tar, records: list[dict], seed: int):
     rng = np.random.default_rng(seed)
     features, labels, crops = [], [], []
-    for row in records:
+    for _, row in progress(records, "Training features"):
         if row["split"] != "train":
             raise ValueError("Only train recordings may enter optimization")
         samples, digest = load_recording(tar, row)
@@ -94,7 +107,7 @@ def training_arrays(tar, records: list[dict], seed: int):
 
 def validation_arrays(tar, records: list[dict]):
     features, owners, details = [], [], []
-    for index, row in enumerate(records):
+    for index, row in progress(records, "Validation features"):
         if row["split"] != "val":
             raise ValueError("Only val recordings may enter model selection")
         samples, digest = load_recording(tar, row)
@@ -234,6 +247,7 @@ def main() -> None:
     # Restore module state before SciPy's array-backend detection runs.
     missing = object()
     previous_jax = sys.modules.get("jax", missing)
+    print("[train] Initializing TensorFlow and model...", flush=True)
     try:
         sys.modules["jax"] = None
         import tensorflow as tf
@@ -246,12 +260,15 @@ def main() -> None:
         else:
             sys.modules["jax"] = previous_jax
     history, best_score, best_weights, best_epoch = [], -1.0, None, 0
+    print("[train] Indexing archive...", flush=True)
+    index_started = time.perf_counter()
     with tarfile.open(args.input, "r:*") as tar:
         members = tar.getmembers()
+        print(f"[train] Archive indexed: {len(members)} entries; elapsed={time.perf_counter() - index_started:.1f}s", flush=True)
         names = [member.name for member in members if member.isfile()]
         if len(names) != len(set(names)):
             raise ValueError("Duplicate archive member paths")
-        for row in selected:
+        for _, row in progress(selected, "Checking annotations"):
             validate_source(tar, row)
         val_features, owners, val_details = validation_arrays(tar, val)
         if not len(val_features):
@@ -259,10 +276,13 @@ def main() -> None:
         write_csv(output / "val_audio.csv", val_details)
         print(f"[train] Validation prepared: {len(val_features)} active windows", flush=True)
         for epoch in range(1, args.epochs + 1):
+            print(f"[train] Epoch {epoch}/{args.epochs}: preparing training features", flush=True)
             x, y, crops = training_arrays(tar, train, args.seed + epoch)
             write_csv(output / f"train_crops_epoch_{epoch:03}.csv", crops)
+            print(f"[train] Epoch {epoch}/{args.epochs}: fitting {len(y)} active crops", flush=True)
             fit = model.fit(x, tf.keras.utils.to_categorical(y, 4), batch_size=args.batch_size,
                             epochs=1, shuffle=True, class_weight=class_weights(y), verbose=2)
+            print(f"[train] Epoch {epoch}/{args.epochs}: evaluating validation windows", flush=True)
             metrics, _ = aggregate_recordings(predict_windows(model, val_features, args.batch_size),
                                               owners, [r["label"] for r in val])
             history.append({"epoch": epoch, "train_active": len(y), "train_rejected": len(train) - len(y),
@@ -278,6 +298,7 @@ def main() -> None:
                                                 owners, [r["label"] for r in val])
     write_json(output / "val_predictions.json", [{**detail, **prediction} for detail, prediction in zip(val_details, predictions)])
     model_path = output / ("smoke_only.onnx" if smoke else "model.onnx")
+    print("[train] Exporting and checking ONNX...", flush=True)
     export_check = export_onnx(tf, model, model_path, val_features[:min(8, len(val_features))])
     write_json(output / "result.json", {
         "status": "complete", "smoke_only": smoke, "best_epoch": best_epoch, "history": history,

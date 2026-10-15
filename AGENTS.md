@@ -273,6 +273,20 @@ Multimodal-Recognition/
 - 後續才考慮完整 train/val 訓練（`--limit-per-class 0`，另確認 epoch 數與 CPU 時間），再另行接入最終 test 評估及真人收音驗證。目前沒有 test 評估入口、沒有正式準確率，也沒有自動接管 PC/RPi 推論；試跑的 JSON 不等於可部署的合格證明。
 - 未修改 `config/config.yaml`、`src/audio/inference.py`、前端或舊模型；保留原始資料與失敗試跑紀錄，未執行 git add、commit 或 push。
 
+## 訓練前處理加速與進度顯示（2026-10-15）
+- 使用者啟動完整 30 epochs 後因長時間沒有進度提示而中止，原目錄 `models/emotiontalk_manifest_train_20261015_075950_570717/` 保留。內含三份前置紀錄與 08:17 產生的 `val_audio.csv`，沒有第一輪 crop／epoch 檔、ONNX 或 `result.json`；依程式順序判斷中止於第一輪訓練特徵準備，不能當作已完成訓練。中止後確認 Python 程序已結束。
+- 只讀量測 8 筆 train 錄音，原高通濾波的 Python 逐點迴圈耗時約 0.40 秒，是明顯瓶頸之一；完整音訊流程還包括讀檔、解碼、音訊檢查、重取樣與 MFCC，不將所有耗時歸因於濾波。
+- 修改 `src/audio/preprocessing.py`：新增 `_highpass_filter_fast()`，以既有 SciPy 的 `signal.lfilter` 計算原一階高通遞迴。保留 80 Hz、16 kHz、float32 輸入差分及 `y[0]=x[0]`；內部累積改為 float64，輸出仍為 float32。不改 VAD、正規化、切片、MFCC 設定或標籤。`src/audio/features.py` 與正式 `src/audio/inference.py` 未修改。
+- 浮點捨入方式不同，因此不是逐位元一致。規格改記為 `emotiontalk-mfcc-v1.1`，在 `preprocessing.json` 明列高通實作；舊模型與既有規格檔不覆蓋。後續部署須保留新模型的規格並驗證實機，不能把此次小量比對視為所有輸入都完全相同。
+- 合成測試涵蓋靜音、正負 DC、脈衝、純音、隨機訊號、單取樣值，波形絕對差門檻 1e-6；廣頻 MFCC 門檻 1e-4。純音的近靜音頻帶會放大捨入差異，MFCC 絕對差約 0.00412，該測試明列門檻 0.005，不再宣稱達到舊版的 1e-6 特徵比對精度。
+- 真實資料只用 train 抽樣 32 筆（seed=42），以固定 crop seed=43 取得 31 個有效窗口。初始 MFCC 絕對差 0.001 檢查未通過（62/37,479 個元素超過），進一步量測最大差 0.00165749、99 百分位差 0.000442505，符合純音測試採用的 0.005 絕對差範圍。以既有 EmotionTalk MFCC ONNX 比對，機率最大絕對差 1.0312e-5（檢查門檻 1e-4），31 個窗口分類均相同，VAD、裁切位置及來源紀錄相同；未計算準確率或讀取 test 音訊。
+- 速度比較採預熱後交錯執行新舊完整 `training_arrays()` 各三次，包含讀檔／檢查／重取樣／特徵：32 筆的中位耗時由 2.5774 秒降為 1.0931 秒，約 2.36 倍。這是該批資料與當時環境的量測，不是完整 epoch 或 30 輪的時間保證；磁碟快取、錄音長度及系統負載會影響結果。
+- 修改 `scripts/train_audio_emotiontalk_manifest.py`：顯示 TensorFlow 初始化、archive 索引、標註檢查、驗證特徵、每輪訓練特徵、模型擬合、驗證及 ONNX 匯出階段。逐筆處理的階段顯示已處理／總筆數與 elapsed 秒數；開始、完成立即輸出，期間每完成一筆檢查是否已間隔 5 秒才更新，並 flush。它不是背景心跳，不保證單筆耗時時每 5 秒都有訊息；沒有虛構 ETA。
+- 更新 `tests/test_audio_preprocessing.py` 與 `tests/test_emotiontalk_training.py`，新增 2 項濾波／特徵及 3 項進度測試；涵蓋原始資料不變、初始狀態、定時進度、完成筆數、空清單與中斷不誤報完成。`python -B -m unittest discover -s tests -q` 共 51 項通過。
+- 只執行新的小規模試跑：`python scripts/train_audio_emotiontalk_manifest.py --epochs 1 --limit-per-class 8 --output-dir models/emotiontalk_manifest_smoke_fast_20261015_v1`。32 train／32 val、1 epoch 完成；驗證 320 個有效窗口準備約 3.8 秒，訓練特徵準備約 1.2 秒，ONNX 與 TensorFlow 的 8 個窗口比對最大絕對差約 4.17e-7。`smoke_only.onnx` 仍僅供流程測試，不可替換正式模型。
+- 另確認修改前既有 models 目錄內的 27 個檔案雜湊均不變（包含舊模型、先前試跑與中止紀錄）、三份來源清單 SHA-256 不變，重用新試跑輸出位置會拒絕且產物雜湊不變。沒有刪除資料、安裝套件或執行 git add／commit／push。
+- 未自動重跑 30 epochs，未增加中斷續訓。使用者準備好後仍可自行執行 `python scripts/train_audio_emotiontalk_manifest.py --epochs 30 --limit-per-class 0`，會從頭訓練並建立新目錄，不會接續中止那次。保持電腦開機、不休眠，依新的階段與筆數觀察進度；完整訓練耗時和實機準確率仍待驗證。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）

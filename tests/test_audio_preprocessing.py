@@ -4,7 +4,7 @@ import numpy as np
 
 from src.audio.features import extract_light_mfcc_like, highpass_filter
 from src.audio.preprocessing import (
-    WINDOW_FRAMES, evaluation_windows, preprocessing_spec,
+    WINDOW_FRAMES, _highpass_filter_fast, evaluation_windows, preprocessing_spec,
     to_mono_16k, training_window, window_features,
 )
 
@@ -103,7 +103,8 @@ class AudioPreprocessingTests(unittest.TestCase):
         expected = highpass_filter(window / np.max(np.abs(window)), 16000, 80)
         expected = extract_light_mfcc_like(expected, 16000, 13, 512, 256, include_delta=False)
         expected = np.pad(expected, ((0, 0), (0, 93 - expected.shape[1])))
-        np.testing.assert_allclose(features, expected, atol=1e-6)
+        # Tiny filter rounding changes are magnified in the near-silent tone bins.
+        np.testing.assert_allclose(features, expected, rtol=0, atol=0.005)
         np.testing.assert_array_equal(window, saved)
         self.assertEqual(features.shape, (13, 93))
         self.assertEqual(features.dtype, np.float32)
@@ -112,6 +113,32 @@ class AudioPreprocessingTests(unittest.TestCase):
     def test_wrong_window_size_is_rejected(self):
         with self.assertRaises(ValueError):
             window_features(np.zeros(100, dtype=np.float32))
+
+    def test_fast_highpass_preserves_initial_state_and_waveform(self):
+        rng = np.random.default_rng(42)
+        time = np.arange(WINDOW_FRAMES) / 16000
+        signals = [np.zeros(WINDOW_FRAMES), np.ones(WINDOW_FRAMES),
+                   -np.ones(WINDOW_FRAMES), np.eye(1, WINDOW_FRAMES).ravel(),
+                   np.sin(2 * np.pi * 220 * time), rng.uniform(-1, 1, WINDOW_FRAMES),
+                   np.array([0.4])]
+        for index, signal in enumerate(signals):
+            with self.subTest(signal=index):
+                source = signal.astype(np.float32)
+                saved = source.copy()
+                actual = _highpass_filter_fast(source, 16000, 80)
+                expected = highpass_filter(source, 16000, 80)
+                np.testing.assert_allclose(actual, expected, rtol=0, atol=1e-6)
+                np.testing.assert_array_equal(source, saved)
+                self.assertEqual(actual.dtype, np.float32)
+                self.assertEqual(actual[0], source[0])
+
+    def test_fast_features_match_reference_on_broadband_audio(self):
+        source = np.random.default_rng(42).uniform(-0.2, 0.2, WINDOW_FRAMES).astype(np.float32)
+        actual, _ = window_features(source)
+        filtered = highpass_filter(source / np.max(np.abs(source)), 16000, 80)
+        expected = extract_light_mfcc_like(filtered, 16000, 13, 512, 256, include_delta=False)
+        expected = np.pad(expected, ((0, 0), (0, 93 - expected.shape[1])))
+        np.testing.assert_allclose(actual, expected, rtol=0, atol=1e-4)
 
     def test_spec_does_not_share_mutable_state(self):
         spec = preprocessing_spec()

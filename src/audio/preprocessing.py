@@ -4,7 +4,7 @@ from math import gcd
 
 import numpy as np
 
-from src.audio.features import extract_light_mfcc_like, highpass_filter
+from src.audio.features import extract_light_mfcc_like
 
 
 SAMPLE_RATE = 16000
@@ -17,7 +17,7 @@ FEATURE_FRAMES = 93
 def preprocessing_spec() -> dict:
     """Candidate Tiny CNN input contract; not yet connected to live inference."""
     return {
-        "version": "emotiontalk-mfcc-v1",
+        "version": "emotiontalk-mfcc-v1.1",
         "labels": ["neutral", "happy", "sad", "anger"],
         "sample_rate": SAMPLE_RATE,
         "channel_policy": "arithmetic_mean",
@@ -30,6 +30,7 @@ def preprocessing_spec() -> dict:
         "vad_threshold": VAD_THRESHOLD,
         "order": ["mono", "resample", "crop_or_pad", "rms_vad", "peak_normalize", "highpass", "mfcc", "feature_pad"],
         "highpass_cutoff": 80,
+        "highpass_implementation": "scipy.signal.lfilter on float32 differences; float64 recurrence; float32 output; y[0]=x[0]",
         "mfcc": {"n_mfcc": 13, "n_fft": 512, "hop_length": 256, "n_mels": 40, "include_delta": False},
         "feature_shape": [13, FEATURE_FRAMES],
     }
@@ -97,6 +98,21 @@ def evaluation_windows(samples):
         yield last_start, _window(samples, last_start)
 
 
+def _highpass_filter_fast(samples: np.ndarray, sample_rate: int, cutoff_hz: float) -> np.ndarray:
+    from scipy.signal import lfilter
+
+    rc = 1.0 / (2.0 * np.pi * cutoff_hz)
+    alpha = rc / (rc + 1.0 / sample_rate)
+    result = np.empty_like(samples)
+    result[0] = samples[0]
+    if len(samples) > 1:
+        # Preserve float32 input differences and the original y[0] = x[0].
+        # lfilter retains a float64 recurrence instead of rounding each step.
+        result[1:], _ = lfilter([alpha], [1.0, -alpha], np.diff(samples),
+                                zi=[alpha * float(samples[0])])
+    return result
+
+
 def window_features(window) -> tuple[np.ndarray | None, float]:
     """Return (MFCC or None for inactive audio, raw RMS); never invent neutral."""
     samples = _mono(window)
@@ -108,7 +124,7 @@ def window_features(window) -> tuple[np.ndarray | None, float]:
     peak = float(np.max(np.abs(samples)))
     if peak > 1e-8:
         samples = samples / peak
-    samples = highpass_filter(samples, sample_rate=SAMPLE_RATE, cutoff_hz=80)
+    samples = _highpass_filter_fast(samples, sample_rate=SAMPLE_RATE, cutoff_hz=80)
     features = extract_light_mfcc_like(
         samples, sample_rate=SAMPLE_RATE, n_mfcc=13, n_fft=512,
         hop_length=256, n_mels=40, include_delta=False,

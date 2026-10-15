@@ -2,12 +2,13 @@ import hashlib
 import io
 import json
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 import numpy as np
 
 from scripts.train_audio_emotiontalk_manifest import (
-    aggregate_recordings, class_weights, select_records, training_arrays,
+    aggregate_recordings, class_weights, progress, select_records, training_arrays,
     validate_source, validation_arrays,
 )
 
@@ -36,6 +37,30 @@ class FakeTar:
 
 
 class EmotionTalkTrainingTests(unittest.TestCase):
+    def test_progress_reports_started_periodic_and_finished_counts(self):
+        output = io.StringIO()
+        with redirect_stdout(output), patch("scripts.train_audio_emotiontalk_manifest.time.perf_counter",
+                                           side_effect=[100, 100.2, 106, 106.2]):
+            actual = list(progress(["a", "b", "c"], "Test features"))
+        self.assertEqual(actual, [(0, "a"), (1, "b"), (2, "c")])
+        self.assertIn("Test features: 0/3", output.getvalue())
+        self.assertNotIn("Test features: 1/3", output.getvalue())
+        self.assertIn("Test features: 2/3; elapsed=6.0s", output.getvalue())
+        self.assertIn("Test features: 3/3; elapsed=6.2s", output.getvalue())
+
+    def test_interrupted_progress_does_not_claim_completion(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            iterator = progress(["a"], "Test features")
+            self.assertEqual(next(iterator), (0, "a"))
+            iterator.close()
+        self.assertIn("0/1", output.getvalue())
+        self.assertNotIn("1/1", output.getvalue())
+
+    def test_empty_progress_is_safe(self):
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(list(progress([], "Empty")), [])
+
     def test_selection_is_seeded_and_keeps_split(self):
         source = records()
         chosen = select_records(source, "train", 2, 42)
