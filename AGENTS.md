@@ -310,6 +310,21 @@ Multimodal-Recognition/
 - `git diff HEAD -- models config src scripts tests` 無差異，原有已追蹤模型／程式／設定未改；兩個既有完成試跑模型也通過其原始 `result.json` SHA-256 核對。工具重連導致啟動前暫存在工具記憶體的全檔雜湊快照遺失，因此未宣稱已完成所有未追蹤舊檔的前後雜湊比對。沒有刪除原始資料、舊模型或任何試跑／中止目錄。
 - 本次只新增完整訓練輸出並更新本節，未修改正式推論或 config 指向；未使用 test 音訊、未測真人麥克風／樹莓派、未執行 git add、commit 或 push。下一步先分析錯誤與模型／輸入限制，不因訓練流程成功就自動部署；若要再長時間訓練，應先另行加入可驗證的 checkpoint／續訓能力。
 
+## EmotionTalk 驗證集誤判診斷（2026-10-15）
+- 新增 `scripts/diagnose_emotiontalk_validation.py`，只分析完整訓練的 `val_predictions.json`／`result.json`，結合既有 `val.csv` 與音訊 audit 的 val 列，不重訓、不重新推論、不讀取 test 音訊或 test.csv，不修改正式模型與設定。audit CSV 原本含三個集合，診斷只選取 val 列進行配對與統計。
+- 核對 run／audit 的 val manifest SHA-256、來源集合、重複／缺少路徑、標籤、說話者、PCM SHA-256、格式／長度、機率與有效窗口數，再重算 confusion matrix、accuracy、macro-F1 與拒判分母，避免把不同模型或資料的紀錄混在一起。原始音量採先前 audit 的整段混音 RMS，不是推論窗口補零／重取樣後的 RMS。
+- 新報告：`data/reports/emotiontalk_validation_diagnostics_20261015_v1/`，包含中文 `report.md`、`summary.json`、2,194 筆 `validation_diagnostics.csv` 及人工填寫用 `listening_cases.csv`。每筆紀錄包含原標籤、預測、平均機率最大值、長度、RMS、有效／無效窗口數、說話者與標註複核旗標；不包含逐字稿。
+- 統計確認：正確 1,044 筆、已有有效窗口但判錯 1,134 筆、整段拒判 16 筆。沿用最佳 epoch 30，accuracy=47.58%、macro-F1=0.408865。這是既有結果的診斷，並非新一輪準確率改善或 test 評估。
+- 常見混淆：neutral → anger 217 筆、neutral → sad 202 筆、anger → happy 173 筆、neutral → happy 136 筆、happy → anger 100 筆。happy 被判為 anger 占原始 happy 的 34.84%；anger 被判為 happy 占原始 anger 的 28.50%。
+- 正確／誤判的整段 RMS 中位數為 0.06177／0.06336，長度中位數為 3.378／4.227 秒，有效窗口中位數為 5／7；拒判錄音長度中位數 0.878 秒。僅 10 筆整段 RMS < 0.01（均拒判），另外 6 筆整段 RMS >= 0.01 仍無有效窗口，不能把整段 RMS 與窗口 VAD 判斷混為一談。這些統計不足以認定調高麥克風音量就會改善分類。
+- 四位 val 說話者 accuracy 為 44.83%、30.72%、67.01%、38.71%，報告同時保留每組四類筆數；資料分布不同，不據此認定是特定說話者、音量或錄音長度造成誤判。短於 1.5 秒組也有大量 neutral，因此不能只看分桶總 accuracy 就斷言短片段更好。
+- 人工聽音案例：每類一筆中位信心度正確案例與最高信心度誤判，另選 happy／sad 誤報、短錄音誤判、拒判，來源去重後共 10 筆。這是刻意選擇的診斷案例，不是隨機代表性抽樣；高分誤判的分數未經機率校準，不代表真實正確率。
+- 音檔為原始完整 WAV 的逐位元副本，沒有轉檔、增益或裁切，存於已被 Git 忽略的 `data/datasets/emotiontalk_review_20261015_v1/`，合計 4,046,120 bytes。只從 tar 讀出這 10 筆 val WAV 與其標註，先驗證標註及 PCM 雜湊，再用固定檔名寫入新目錄，不使用 extractall；原 archive 不改寫。音檔仍受原資料集授權限制，不隨報告提交。報告內可點選音檔連結；`listening_cases.csv` 留有 `heard_label`、`label_agreement`、`audio_issue`、`notes` 空欄供組員記錄。
+- 助理尚未人工聽音，沒有宣稱標籤錯誤、音檔無人聲或已找出模型不準的原因。原錄音的預測是有效窗口平均，不等於逐瞬間情緒；聽音後仍不確定可以保留不確定，不因模型判錯就修改原標籤。
+- 執行方式：`python -B scripts/diagnose_emotiontalk_validation.py --run-dir models/emotiontalk_manifest_train_20261015_full_v1`。預設建立新時間戳報告／聽音目錄；可用 `--output-dir` 與 `--audio-dir` 指定新位置，聽音目錄限制在 `data/datasets`。同一位置重跑會拒絕，不刪除舊輸出以重跑；完整成功後才寫入 `summary.json`。
+- 新增 `tests/test_emotiontalk_validation_diagnostics.py` 的 10 項測試，涵蓋拒判分母、test 擋入、缺失／重複來源、標籤／格式／PCM 不一致、無效機率／窗口數、空分組、分桶邊界、可重現去重案例、輸出拒絕覆蓋及 val 音訊標註核對。全專案 61 項測試通過；另驗證報告可重現、2,194 筆明細與 10 個 WAV 雜湊／連結有效、人工欄位空白、未載入 TensorFlow。
+- 執行前後既有 models／data/reports／config 共 116 個檔案 SHA-256 不變；拒絕覆蓋後本次 4 份報告與 10 個 WAV 雜湊不變。沒有刪除資料、安裝套件、修改 .gitignore、切換模型或執行 git add／commit／push。下一步先由使用者與組員聽這批案例，再決定是否需要窗口層級診斷或耳機實測新舊模型，不自動重訓。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）
