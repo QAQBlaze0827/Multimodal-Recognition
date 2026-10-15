@@ -349,6 +349,46 @@ Multimodal-Recognition/
 - 兩個輸出目錄重跑皆拒絕覆寫，各 12 個檔案雜湊不變；修改前既有 models／data/reports／config／聽音 WAV 共 130 個檔案 SHA-256 不變。未刪除原始資料或中止／試跑目錄，未安裝套件、修改正式 config 或模型指向，未執行 git add、commit 或 push。
 - 訓練入口仍讀三份 manifest 做切分檢查，但只解碼選中的 train／val；沒有 test 音訊評分。下一步需另行確認 checkpoint／續訓功能與較充分的架構對照預算，再決定是否完整重訓。這兩個小規模模型不能直接作為正式部署模型。
 
+## 本機耳機錄音診斷工具（2026-10-15）
+- 使用者回報：在相同耳機麥克風、近似距離下，完整 30 輪模型 `models/emotiontalk_manifest_train_20261015_full_v1/model.onnx` 幾乎都預測 sad，舊模型則偏 happy／anger。這是使用者的非受控即時觀察，助理未實機重現；不是兩個模型對同一份錄音的結果，尚不能判定偏差原因或正式準確率。
+- 本次先完成使用者同意的「錄音工具」，不實作模型比較或 checkpoint，不重訓、不改模型權重與正式推論。新增 `scripts/record_audio_samples.py`，使用既有 sounddevice 與 soundfile；本機已安裝，未安裝或升級套件。sounddevice 列於 requirements.txt、soundfile 列於 requirements_train.txt，只有安裝執行依賴的另一台電腦不一定已有 soundfile。
+- 預設中性／開心／難過／生氣（neutral/happy/sad/anger）各 3 段，每段 5 秒，16 kHz 單聲道。每段等使用者按 Enter 才開始；可用 `--device` 指定裝置索引、`--label` 只錄一類、`--takes` 指定每類段數、`--seconds` 指定秒數、`--sample-rate` 指定擷取取樣率。每次呼叫建立新的時間戳資料夾，不接續或覆寫既有錄音。
+- 使用方式（專案根目錄、啟用既有 .venv，先停止 app.py）：
+  - `python scripts/record_audio_samples.py --list-devices`：只列裝置，不錄音、不建立輸出。
+  - `python scripts/record_audio_samples.py --device 3`：範例索引 3 須換成清單中的耳機輸入裝置，接著依提示錄 12 段。也可省略 device 使用系統預設輸入，工具會印出實際裝置索引與名稱。
+  - `python scripts/record_audio_samples.py --device 3 --label neutral --takes 1 --seconds 5`：先試錄一段再聽音確認。若裝置不支援 16 kHz，會在建立輸出前報錯，可依裝置支援規格另用 `--sample-rate 48000`；工具不自動重取樣。
+- 輸出於 `data/datasets/local_audio/session_時間戳/`，含 session.json、每段原始浮點 WAV 與同名 JSON；全部成功才寫 summary.json。每段 JSON 包含預期情緒、時間、取樣率／聲道／長度、RMS、peak、滿刻度比例、是否全零與 WAV SHA-256，另留 heard_label、notes 空欄供聽後記錄。expected_label 僅代表使用者打算表達的情緒，不是經獨立標註確認的答案；不儲存逐字稿、不產生準確率。
+- WAV 採 32-bit FLOAT，保留音訊 API 傳回的 float32 樣本，不做 peak normalization、高通、VAD、降噪、裁切或重取樣，也不因靜音而刪除錄音。作業系統／裝置仍可能做增益、降噪或取樣率轉換，不能把這份錄音宣稱為未經硬體／系統處理的訊號。RMS／滿刻度提示僅供聽音複核，不自動判斷品質或情緒。
+- 僅針對本輪筆電耳機單聲道擷取；尚不支援 INMP441 的雙聲道擷取後選左聲道，不應直接當作樹莓派收音問題已處理。比較模型前，先聽 WAV 確認是正確麥克風、內容完整可辨；使用固定距離與音量設定，可用相同幾句內容表達四種情緒，不以提高音量代替表情語調。12 段是初步診斷，不是獨立正式測試集或訓練資料。
+- 輸出目錄使用 exist_ok=False、各檔案使用 x／xb 模式，拒絕覆寫。擷取期間 Ctrl+C 會停止串流且不將未完成的緩衝區寫成成功片段；此前完成的 WAV／JSON 保留。發生 overflow 等串流錯誤會停止、不靜默接受該段。寫檔中斷或磁碟錯誤可能留下不完整檔案，工具不刪除它們；缺 summary.json 代表整批未完成，完整片段仍可人工檢查。
+- 新增 `tests/test_record_audio_samples.py` 的 12 項測試：預設數量、記憶體內 FLOAT WAV 逐樣本讀回（含小音量與超滿刻度）、靜音保留、無效樣本、裝置／取樣率傳遞、等待與停止串流、overflow／中斷、擷取長度檢查、覆寫拒絕、逐段確認與最後完成標記、中斷保留與 CLI 參數檢查。測試使用模擬裝置、記憶體音檔及模擬檔案操作，不開啟真實麥克風、不建立或刪除測試音檔。
+- 驗證：`python -B -m unittest discover -s tests -q` 全專案 78 項通過；`python -B scripts/record_audio_samples.py --help` 正常。git check-ignore 確認該錄音資料夾的 WAV／JSON 已被既有 data/datasets/ 規則忽略，不需修改 .gitignore，也不應隨程式 commit 上傳個人錄音。尚未驗證真實裝置開啟與收音品質，需由使用者執行試錄。
+- 本次只新增錄音腳本、測試並追加本節；未修改 config、既有模型／報告／人工回饋，未開啟麥克風、啟動訓練、刪除資料或執行 git add／commit／push。下一步等使用者完成聽音，再另行實作相同錄音的新舊模型比較，區分未加權未平滑與目前正式設定的結果。
+
+## 本機同錄音新舊模型比較（2026-10-15）
+- 使用者已錄製 `data/datasets/local_audio/session_20261015_220659_198289/`，共 12 段，neutral/happy/sad/anger 各 3 段，每段 5 秒、16 kHz、單聲道 FLOAT WAV。錄音工具紀錄裝置索引 1、MME 耳機輸入。已讀取完整 WAV 並核對 summary、sidecar、格式、有限值及 SHA-256；無全零或滿刻度樣本，不代表助理已聽音或確認標籤正確。
+- 使用者同意後新增 `scripts/compare_local_audio_models.py`，僅比較這批相同音檔，不錄音、不重訓、不讀 EmotionTalk 原始 archive 或 test 音訊，不修改正式推論。固定模型為 old=`models/tiny_cnn_audio_emotiontalk_fp32.onnx`、new=`models/emotiontalk_manifest_train_20261015_full_v1/model.onnx`，不是兩輪時間卷積試跑模型；記錄兩個實際模型 SHA-256，模型不存在／ONNX 載入失敗／非四類 13x93 輸入會停止，不接受 heuristic fallback 冒充模型結果。
+- 沿用 `evaluation_windows()` 的 1.5 秒窗口、0.5 秒步長及尾窗，每段 8 個窗口。特徵計算使用正式 `src/audio/features.py` 的 highpass_filter／MFCC，先原始 RMS VAD、peak normalization、80 Hz 高通、MFCC 13 維、FFT 512、hop 256，再右補零至 93 格。沒有用訓練模組的快速高通代替正式版本，也沒有更動原音量／音檔。入口目前只接受完整的 16 kHz 單聲道 FLOAT 錄音 session，不自行轉檔。
+- 每個窗口只準備一次特徵，交給兩模型；分為 raw（未加權、未平滑、floor=0）、calibrated（目前 config 加權與 floor）、smoothed（再套用目前 alpha）。使用既有 AudioEmotionModel 處理類別權重；本次 neutral/sad 權重 1、anger 權重 0.8、floor=0.20、alpha=0.7、VAD=0.01。每段獨立重設平滑，VAD 拒判也重設；不重現即時執行緒的精確排程或跨錄音歷史，不宣稱與即時畫面逐格相同。
+- 本次固定輸出 `data/reports/local_audio_comparison_20261015_v1/`：中文 report.md、576 列逐窗口 windows.csv、72 列逐錄音 recordings.csv、完成摘要 summary.json。包含各類機率、RMS、特徵 SHA-256、VAD／模型 fallback、整段平均預測與最後窗口預測、逐類指標與含拒判欄的混淆矩陣；沒有複製個人音檔、逐字稿或耳機裝置名稱到報告。
+- 結果（整段有效窗口平均機率，依使用者 expected_label 計算一致率，不是正式測試準確率）：
+  | 模型／模式 | 與預期一致 | Macro-F1 | 整段覆蓋率 |
+  | --- | --- | --- | --- |
+  | old/raw | 3/12（25%） | 0.1000 | 100% |
+  | old/calibrated | 3/12（25%） | 0.1000 | 100% |
+  | old/smoothed | 3/12（25%） | 0.1000 | 100% |
+  | new/raw | 6/12（50%） | 0.3375 | 100% |
+  | new/calibrated | 6/12（50%） | 0.3506 | 100% |
+  | new/smoothed | 6/12（50%） | 0.3506 | 100% |
+- 舊模型三模式的 12 段平均分類全部為 anger；新模型在三種模式均判對 neutral 3 段及 anger 3 段，但 happy 3 段、sad 3 段全未判對。new/raw 的 happy_01 為 anger，加權後改為 neutral，仍未符合預期；其餘整段類別不因加權改變，平滑後的整段類別與 calibrated 相同。不能據此宣稱新模型四類辨識已可靠，也不能把 50% 與之前資料集分數當作同一評估。
+- 逐窗口共有 96 個位置、91 個通過 VAD；neutral_02 有 2 個拒判，happy_02 有 3 個拒判，其餘皆有效，全部 12 段仍有有效預測。old/raw 的有效窗口預測 neutral/happy/sad/anger=12/10/0/69；new/raw=52/1/2/36。old/smoothed=2/2/0/87；new/smoothed=50/3/2/36。這批沒有重現完整模型「幾乎都 sad」，但有少數 sad 窗口；不否定使用者先前即時觀察。
+- 本次所有窗口的 confidence-floor fallback 均為 0。比較器保留目前正式平滑邏輯：若未來出現 confidence=0 的 neutral fallback，原程式可能在平滑後將它轉為有效分數，報告以 model_fallback 額外標記，不默默修掉來改變比較結果；這項既有行為不是本輪誤判原因。
+- 新增 `tests/test_local_audio_comparison.py` 的 8 項測試，涵蓋平滑公式與 VAD 重設／每段隔離、既有零信心 fallback 行為、逐錄音等權與拒判分母、正式前處理計算一致／來源不變、設定錯配阻擋、錄音雜湊與 sidecar 核對、缺失／重複／不安全路徑及載入失敗拒絕。全專案 `python -B -m unittest discover -s tests -q` 共 86 項測試通過。
+- 另獨立讀回兩份 CSV 重算逐錄音平均、分類、混淆矩陣及一致率，核對 96 個窗口在兩模型／三模式的特徵 SHA-256 完全相同；相同輸出目錄重跑會拒絕，4 份報告雜湊不變。執行前後既有 models／config／data/reports／本次錄音 session 共 171 個檔案 SHA-256 不變，既有未追蹤試跑模型與前輪未提交錄音工具均保留。
+- 重現指令：`python -B scripts/compare_local_audio_models.py --session data/datasets/local_audio/session_20261015_220659_198289`。省略 output-dir 會建立新的時間戳報告資料夾；不能重用 v1 或刪除它以重跑。可用 --config 指定已存在且符合本次輸入規格的配置，設定原檔不改寫。
+- 限制與後續：助理沒有人工聽音，expected_label 是使用者預期情緒，不是獨立盲標；這 12 段只能診斷，不能作為正式準確率或拿來反覆調參後仍稱獨立測試。加權／平滑沒有修正本批 happy／sad 的整段誤判，不宜只調類別權重就宣稱改善。即時與檔案結果不同時，先核對當時模型路徑、config、輸入裝置與平滑歷史；目前 main 的音訊串流未傳入 device 參數，使用系統預設裝置，而本批錄音工具明確指定索引 1，兩者是否相同尚未確認，不能直接斷言麥克風故障。
+- 本次只新增比較腳本、測試與診斷報告並更新本節；沒有刪除資料、修改現有錄音／模型／config、開啟麥克風、啟動訓練或執行 git add、commit、push。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）

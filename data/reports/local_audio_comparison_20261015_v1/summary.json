@@ -1,0 +1,507 @@
+{
+  "status": "complete",
+  "session": "session_20261015_220659_198289",
+  "recordings": 12,
+  "labels": [
+    "neutral",
+    "happy",
+    "sad",
+    "anger"
+  ],
+  "audio_config": {
+    "enabled": true,
+    "sample_rate": 16000,
+    "chunk_size": 256,
+    "device_id": -1,
+    "window_seconds": 1.5,
+    "mfcc": {
+      "n_mfcc": 13,
+      "n_fft": 512,
+      "hop_length": 256,
+      "include_delta": false
+    },
+    "model": {
+      "path": "models/tiny_cnn_audio_emotiontalk_fp32.onnx",
+      "calibration": {
+        "neutral_logit_scale": 1.0,
+        "sad_logit_scale": 1.0,
+        "anger_logit_scale": 0.8,
+        "confidence_floor": 0.2
+      }
+    },
+    "temporal_smoothing": {
+      "enabled": true,
+      "alpha": 0.7
+    },
+    "hop_seconds": 0.5,
+    "vad_threshold": 0.01,
+    "highpass_cutoff": 80
+  },
+  "metrics": {
+    "old/raw": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.1,
+      "per_class": {
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.25,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.4
+        }
+      },
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.25
+    },
+    "old/calibrated": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.1,
+      "per_class": {
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.25,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.4
+        }
+      },
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.25
+    },
+    "old/smoothed": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.1,
+      "per_class": {
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.25,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.4
+        }
+      },
+      "confusion_matrix": [
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.25
+    },
+    "new/raw": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.33749999999999997,
+      "per_class": {
+        "neutral": {
+          "precision": 0.42857142857142855,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.6
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.6,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.7499999999999999
+        }
+      },
+      "confusion_matrix": [
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          2,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.5
+    },
+    "new/calibrated": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.35064935064935066,
+      "per_class": {
+        "neutral": {
+          "precision": 0.375,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.5454545454545454
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.75,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.8571428571428571
+        }
+      },
+      "confusion_matrix": [
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.5
+    },
+    "new/smoothed": {
+      "recordings": 12,
+      "rejected": 0,
+      "coverage": 1.0,
+      "macro_f1": 0.35064935064935066,
+      "per_class": {
+        "neutral": {
+          "precision": 0.375,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.5454545454545454
+        },
+        "happy": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "sad": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 3,
+          "f1": 0.0
+        },
+        "anger": {
+          "precision": 0.75,
+          "recall": 1.0,
+          "support": 3,
+          "f1": 0.8571428571428571
+        }
+      },
+      "confusion_matrix": [
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "confusion_columns": [
+        "neutral",
+        "happy",
+        "sad",
+        "anger",
+        "abstain"
+      ],
+      "intended_label_agreement": 0.5
+    }
+  },
+  "models": {
+    "old": {
+      "path": "models/tiny_cnn_audio_emotiontalk_fp32.onnx",
+      "sha256": "be6dc7d124d0d78a83e22695023c8ec9969f835270a8e2ee1599b185e6b6c1b5"
+    },
+    "new": {
+      "path": "models/emotiontalk_manifest_train_20261015_full_v1/model.onnx",
+      "sha256": "82fd30e480aabdde1eb719f5a7b1f80e47ad88abe4bdb336a0a3cc352d08ad1b"
+    }
+  },
+  "source_files_sha256": {
+    "summary.json": "4047c13c50740e689d92707b0fdab83bb770a0438a9e131fb9686ef8e961d14e",
+    "session.json": "24aa398845c7e8a8d2d8a2042688c6e0971bcb31c02e61199ae9b6024d4c1c23",
+    "neutral_01.wav": "a3bf9607936542db5420554d2c3e368624d7c9da6b6c76d6c00d1d656a3c6265",
+    "neutral_01.json": "46413031b70c1ed0de22560f07767720fddc31c891cae87af5d7af0b2d616933",
+    "neutral_02.wav": "2c5e12b049931799b776e16a97e1266422a0d5fbe33c03a7cecd42e027e6e856",
+    "neutral_02.json": "18bd8edc42194a9ba2ed6e5d4fef6142d35976bd81caf1ecc597c98dad0d37fb",
+    "neutral_03.wav": "53bc5d06f70f6dcd8aa8e5abf1d1d1efb7d3691eeb8f1a35e9608817232474e8",
+    "neutral_03.json": "1c9c93e4b87dd8986c126826aa704ee03631a0fcf9572dde9aabc8edf5e48dba",
+    "happy_01.wav": "9a9bb7c3645a2a905acc8426ab5c760514da22b2fdd7aa0a008ffbc5d13636cc",
+    "happy_01.json": "665b0dea2cd1f6b33ea60198fd7fe0025768f1782636ffd65fb68dd905995df2",
+    "happy_02.wav": "7d14eb687f4d119876739aac960596a12b5f3a1713fba76f93a398c9200f7344",
+    "happy_02.json": "f59f2080d07e1234e3f5726361939112b858cd85c9c633f062c9db69dde6e025",
+    "happy_03.wav": "23bf32c15f1ce916355f9adbd5306db60297d3f21ee96b88ada229cecc1e8ef9",
+    "happy_03.json": "7f662e72d407e5f9d608f18dcc29d1041f2036943c54a3e8a358f429a995de08",
+    "sad_01.wav": "a8ccdf04ad3ba63de991249af48adf629e64671e44c890b2cbf942dbf8f91a53",
+    "sad_01.json": "297b5a4e990cf3b3186b41de47ee1884367809e6415043d39f0e9ac1b4181b38",
+    "sad_02.wav": "d525b3026125626ab62366cb7cc71803c2c7236a78ecbccd3ce63cdb9d49f593",
+    "sad_02.json": "0d1aed5e3113d568271fba428e63765dd45a6391bc905607906540773b441ba5",
+    "sad_03.wav": "4618c23719b3c55579f8ce4c1de957447c829bbed0525b0cede9e88aee8e2ff8",
+    "sad_03.json": "8250915d5e6088f3c8be3525baf12cc58090266db7c6b93173d5c92471d9a347",
+    "anger_01.wav": "3c973a395c136e9ac701f5f33837def40f5ab695dae5bd786598438a66b8f139",
+    "anger_01.json": "bf082496be80ba19692605c534c31f5a87c27676a4cc8a5ed0c57b5f33afa9c5",
+    "anger_02.wav": "a60ef58f0a918b11e99fbd8b437f3ceb5a5972b65fab39b4621ae0f9a623f1af",
+    "anger_02.json": "6f9eac5e71cf5e896f15e331daa82b31e257875dd30fc932ae19166439eed332",
+    "anger_03.wav": "83aea76329a43110b387cf62ce1b6e46041a3e3a2f67d896adef0bf2a04c911b",
+    "anger_03.json": "8b409ccf989fb0777d52c556962e52cb06b59aace00d9e3b8e3697c532e76d29"
+  },
+  "config_sha256": "38a78af0b9e782b91ec3e6cce36f9aad6e39e1cd9a10e111255e29e4e841dd90",
+  "new_preprocessing_sha256": "b25cb8b1082fb684342439ad47fa83045d0ef8e45b1c1f66144b2e7b52d35b1a",
+  "source_unchanged": true,
+  "formal_test_accuracy": false,
+  "human_listening_performed_by_assistant": false,
+  "aggregation": "mean of valid window probabilities per recording; independent smoothing per recording",
+  "feature_pipeline": "production highpass_filter and MFCC; fixed evaluation_windows schedule"
+}
