@@ -197,11 +197,12 @@ def make_dataset(
     return ds
 
 
-def build_model(tf, input_shape: tuple[int, int], learning_rate: float):
+def build_model(tf, input_shape: tuple[int, int], learning_rate: float, *, temporal_axis: bool = False):
     layers = tf.keras.layers
     inputs = tf.keras.Input(shape=input_shape, name="input")
 
-    x = layers.Conv1D(32, kernel_size=5, strides=2, padding="same", use_bias=False)(inputs)
+    x = layers.Permute((2, 1), name="mfcc_to_time")(inputs) if temporal_axis else inputs
+    x = layers.Conv1D(32, kernel_size=5, strides=2, padding="same", use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
 

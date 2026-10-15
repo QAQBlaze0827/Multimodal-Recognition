@@ -335,6 +335,20 @@ Multimodal-Recognition/
 - 驗證：CSV 仍為 10 筆、22 欄，僅最後四個人工欄位改動，前 18 欄逐筆與修改前一致；檢查 10 個音檔雜湊與原模型 `result.json` 的模型雜湊一致。純紀錄更新，未重跑模型訓練或將使用者判斷作為新準確率。
 - 待後續另行確認時間卷積方向的候選設計與小規模試跑計畫；本次只完成紀錄，沒有修改程式、模型、設定或原始音檔，沒有啟動訓練、刪除資料、執行 git add／commit／push。
 
+## EmotionTalk 時間卷積候選與小規模對照（2026-10-15）
+- 根據使用者同意的計畫，只新增時間卷積候選並跑小規模對照，不跑完整 30 epochs、不使用 test 音訊、不替換正式模型。先前人工聽音僅提供診斷線索，不能證明卷積方向是誤判唯一原因。
+- 檢查既有 Tiny CNN 的外部輸入為 `[batch,13 MFCC,93 time]`，channels-last Conv1D 沿 MFCC 軸卷積，時間位置作為通道；不是沿時間軸的局部卷積，但不能說完全無法學習時間資訊。
+- `scripts/train_audio_tiny_cnn.py` 的 `build_model()` 新增預設為 false 的 keyword-only `temporal_axis`。只有候選版會在模型內加入 `Permute((2,1))`，使 Conv1D 收到 `[batch,93 time,13 MFCC]`；原版層序與預設行為保留。兩版外部輸入仍為 `[batch,13,93]`，輸出四類順序不變，不改正式推論的輸入轉置。
+- `scripts/train_audio_emotiontalk_manifest.py` 新增 `--architecture legacy|temporal`，預設 legacy。新增結構檢查與 `model_structure.json`，記錄輸入／輸出、卷積方向、kernel 與中間輸出形狀、總參數量；run config 與完成結果也記錄架構。其餘抽樣、前處理、類別權重、選模與匯出流程不變。
+- 實際完成兩個新輸出目錄：`models/emotiontalk_axis_legacy_smoke_20261015_v1/`、`models/emotiontalk_axis_temporal_smoke_20261015_v1/`。兩版皆為 2 epochs、train／val 每類 8 筆（各 32 筆）、seed=42、batch size=16、learning rate=0.001；每輪 31 個 train 窗口有效、1 個拒絕，val 320 個有效窗口，32 筆錄音 coverage=1.0。選模皆選中 epoch 2。
+- 小樣本結果：legacy accuracy=0.34375、macro-F1=0.245798；temporal accuracy=0.28125、macro-F1=0.158120。候選版本次沒有優於原版；只訓練 2 輪與單一小樣本／種子，不能當正式準確率或宣稱架構改善成功。轉置同時使第一層通道數改變，總參數由 25,828 降至 13,028，並非參數量配平的消融實驗。
+- 兩版 `selected_records.csv`、`preprocessing.json`、`val_audio.csv` 與兩輪 train crop CSV 逐位元相同；run config 僅架構兩欄不同。沒有調整標籤、人工聽音回饋、VAD 或切片規則以提高候選分數。
+- 新增 `tests/test_audio_temporal_architecture.py` 的 5 項測試，涵蓋原版預設／顯式 false 的層序與 seeded weights、轉置值及外部形狀、kernel／中間形狀與參數差、四類正規化機率、錯誤架構拒絕。`python -B -m unittest discover -s tests -q` 全專案 66 項測試通過。
+- 兩版 `smoke_only.onnx` 均通過 8 個真實 val 特徵窗口的 TensorFlow／ONNX 比對，最大絕對差分別約 3.5763e-7、2.3842e-7。另驗證 ORT batch=1／3、既有 `AudioEmotionModel` 的 50／93／120 格特徵補齊／截短；ONNX 第一層 Conv 權重通道數分別為 93 與 13。這是格式與運算相容性驗證，不是耳機或樹莓派準確率測試。
+- 完整比較、模型 SHA-256、限制與重現指令記錄於 `data/reports/emotiontalk_axis_smoke_comparison_20261015_v1.md`。重跑可使用 `python -B scripts/train_audio_emotiontalk_manifest.py --architecture temporal --epochs 2 --limit-per-class 8 --seed 42 --batch-size 16`；改為 `--architecture legacy` 可跑原版。省略 output-dir 會建立新時間戳目錄，不刪除舊輸出以重跑。
+- 兩個輸出目錄重跑皆拒絕覆寫，各 12 個檔案雜湊不變；修改前既有 models／data/reports／config／聽音 WAV 共 130 個檔案 SHA-256 不變。未刪除原始資料或中止／試跑目錄，未安裝套件、修改正式 config 或模型指向，未執行 git add、commit 或 push。
+- 訓練入口仍讀三份 manifest 做切分檢查，但只解碼選中的 train／val；沒有 test 音訊評分。下一步需另行確認 checkpoint／續訓功能與較充分的架構對照預算，再決定是否完整重訓。這兩個小規模模型不能直接作為正式部署模型。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）

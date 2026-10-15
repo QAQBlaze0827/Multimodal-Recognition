@@ -186,6 +186,26 @@ def write_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
+def model_structure(model, architecture: str) -> dict:
+    if architecture not in ("legacy", "temporal"):
+        raise ValueError("Unknown architecture")
+    convolutions = [layer for layer in model.layers if layer.__class__.__name__ == "Conv1D"]
+    expected = (13, 93) if architecture == "legacy" else (93, 13)
+    if (tuple(model.input_shape[1:]) != (13, 93) or tuple(model.output_shape[1:]) != (4,)
+            or len(convolutions) != 2
+            or any(layer.data_format != "channels_last" for layer in convolutions)
+            or tuple(convolutions[0].input.shape[1:]) != expected):
+        raise ValueError("Model does not match the requested convolution axis or external contract")
+    return {
+        "architecture_variant": architecture, "external_input": [None, 13, 93],
+        "output": [None, 4], "convolution_axis": "mfcc" if architecture == "legacy" else "time",
+        "first_conv_input": [None, *expected], "parameter_count": int(model.count_params()),
+        "conv_kernel_shapes": [list(layer.kernel.shape) for layer in convolutions],
+        "conv_output_shapes": [list(layer.output.shape) for layer in convolutions],
+        "note": "Axis change also changes first-layer channel count and parameter count",
+    }
+
+
 def export_onnx(tf, model, output: Path, features: np.ndarray) -> dict:
     import onnxruntime as ort
     import tf2onnx
@@ -216,6 +236,8 @@ def main() -> None:
     parser.add_argument("--limit-per-class", type=int, default=8, help="Per split; 0 uses all train/val recordings. Test remains untouched.")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--architecture", choices=("legacy", "temporal"), default="legacy",
+                        help="legacy convolves MFCC coefficients; temporal transposes inside the model. External input stays [13,93].")
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.limit_per_class < 0 or args.seed < 0:
         parser.error("epochs/batch-size must be positive; limit and seed must be nonnegative")
@@ -239,7 +261,10 @@ def main() -> None:
         "test_audio_used": False, "selection_metric": "val_recording_macro_f1_including_abstention",
         "train_class_weights": "inverse active crop counts, recomputed each epoch",
         "augmentation": "random crop only", "calibration_and_temporal_smoothing": False,
-        "architecture": "existing train_audio_tiny_cnn.build_model; input [batch,13,93] unchanged",
+        "architecture_variant": args.architecture,
+        "architecture": ("existing train_audio_tiny_cnn.build_model; input [batch,13,93] unchanged"
+                         if args.architecture == "legacy" else
+                         "Tiny CNN with internal Permute(2,1); time-axis convolution; external input [batch,13,93]"),
     })
     print(f"[train] {'SMOKE ONLY' if smoke else 'FULL TRAIN'}: train={len(train)}, val={len(val)}; no test audio", flush=True)
 
@@ -253,12 +278,16 @@ def main() -> None:
         import tensorflow as tf
 
         tf.keras.utils.set_random_seed(args.seed)
-        model = build_model(tf, (13, 93), learning_rate=1e-3)
+        model = build_model(tf, (13, 93), learning_rate=1e-3,
+                            temporal_axis=args.architecture == "temporal")
     finally:
         if previous_jax is missing:
             sys.modules.pop("jax", None)
         else:
             sys.modules["jax"] = previous_jax
+    structure = model_structure(model, args.architecture)
+    write_json(output / "model_structure.json", structure)
+    print(f"[train] Architecture={args.architecture}; parameters={structure['parameter_count']}", flush=True)
     history, best_score, best_weights, best_epoch = [], -1.0, None, 0
     print("[train] Indexing archive...", flush=True)
     index_started = time.perf_counter()
@@ -302,6 +331,7 @@ def main() -> None:
     export_check = export_onnx(tf, model, model_path, val_features[:min(8, len(val_features))])
     write_json(output / "result.json", {
         "status": "complete", "smoke_only": smoke, "best_epoch": best_epoch, "history": history,
+        "architecture_variant": args.architecture, "parameter_count": structure["parameter_count"],
         "val": metrics, "onnx_check": export_check, "test_audio_used": False,
         "limitations": ["Smoke scores are not formal accuracy" if smoke else "Validation used for selection; test pending",
                         "No microphone, camera or Raspberry Pi runtime test", "Live inference and config unchanged"],
