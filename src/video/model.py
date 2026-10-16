@@ -43,9 +43,17 @@ class VideoEmotionModel:
         tensor = face_gray.astype(np.float32) / 255.0
         tensor = tensor.reshape(1, 1, self.input_size, self.input_size)
         output = self.session.run(None, {self.input_name: tensor})[0]
-        values = np.asarray(output).reshape(-1)[: len(EMOTIONS)].astype(np.float32)
-        if np.all(values >= 0.0) and abs(float(values.sum()) - 1.0) < 0.05:
-            probs = values / max(float(values.sum()), 1e-8)
+        values = np.asarray(output).reshape(-1).astype(np.float32)
+        if values.size not in (len(EMOTIONS), 7) or not np.isfinite(values).all():
+            raise ValueError("Expected finite four- or seven-class video model output")
+        # Check the full distribution before dropping the legacy model's last three classes.
+        is_probability = np.all(values >= 0.0) and abs(float(values.sum()) - 1.0) < 0.05
+        values = values[: len(EMOTIONS)]
+        if is_probability:
+            total = float(values.sum())
+            if total <= 0.0:
+                return EmotionResult.neutral("video")
+            probs = values / total
         else:
             exp = np.exp(values - np.max(values))
             probs = exp / max(float(exp.sum()), 1e-8)
