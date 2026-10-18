@@ -1,0 +1,701 @@
+{
+  "status": "complete",
+  "session": "session_20261018_190005_599916",
+  "source_summary_sha256": "dc9b062f2d19a2cf4e2a58d69c665594bb500d5147c14ccce01c2ab2acc909c2",
+  "created_at": "2026-10-18T19:23:23.904678+08:00",
+  "models": {
+    "legacy": "cc3d71c2b35a08dbc1eef4cf2fb32e699ac9dea5f77e021367a41e9d8c887d23",
+    "ferplus": "a2a2ba6a335a3b29c21acb6272f962bd3d47f84952aaffa03b60986e04efa61c"
+  },
+  "ferplus_source": {
+    "url": "https://media.githubusercontent.com/media/onnx/models/c5cae0f1942c8d7727372c7b1f6b485aa39e4421/validated/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-8.onnx",
+    "revision": "c5cae0f1942c8d7727372c7b1f6b485aa39e4421",
+    "readme": "https://raw.githubusercontent.com/onnx/models/c5cae0f1942c8d7727372c7b1f6b485aa39e4421/validated/vision/body_analysis/emotion_ferplus/README.md"
+  },
+  "preprocessing": {
+    "legacy": "BGR->OpenCV gray->48x48 linear->float32 /255 NCHW; Softmax probabilities",
+    "ferplus": "BGR->OpenCV gray->Pillow 64x64 LANCZOS->float32 0..255 NCHW; logits->Softmax"
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.0",
+    "onnxruntime": "1.17.3",
+    "opencv": "4.11.0",
+    "pillow": "12.2.0",
+    "provider": "CPUExecutionProvider",
+    "intra_threads": 2,
+    "inter_threads": 1
+  },
+  "median_inference_ms": {
+    "legacy": 0.1940000001923181,
+    "ferplus": 9.918499999912456
+  },
+  "metrics": {
+    "legacy": {
+      "full": {
+        "neutral": {
+          "matched": 2,
+          "total": 3
+        },
+        "happy": {
+          "matched": 2,
+          "total": 3
+        },
+        "sad": {
+          "matched": 2,
+          "total": 3
+        },
+        "anger": {
+          "matched": 0,
+          "total": 3
+        }
+      },
+      "four": {
+        "neutral": {
+          "matched": 2,
+          "total": 3
+        },
+        "happy": {
+          "matched": 2,
+          "total": 3
+        },
+        "sad": {
+          "matched": 2,
+          "total": 3
+        },
+        "anger": {
+          "matched": 0,
+          "total": 3
+        }
+      }
+    },
+    "ferplus": {
+      "full": {
+        "neutral": {
+          "matched": 3,
+          "total": 3
+        },
+        "happy": {
+          "matched": 2,
+          "total": 3
+        },
+        "sad": {
+          "matched": 1,
+          "total": 3
+        },
+        "anger": {
+          "matched": 2,
+          "total": 3
+        }
+      },
+      "four": {
+        "neutral": {
+          "matched": 3,
+          "total": 3
+        },
+        "happy": {
+          "matched": 2,
+          "total": 3
+        },
+        "sad": {
+          "matched": 1,
+          "total": 3
+        },
+        "anger": {
+          "matched": 2,
+          "total": 3
+        }
+      }
+    }
+  },
+  "samples": [
+    {
+      "index": 1,
+      "expected_label": "neutral",
+      "crop_sha256": "a91b049e79acac5f3a353fd1822d7a81444afba4fc4b445a807a2e99ae5acfb2",
+      "gray_sha256": "9156eec2c23c5ce8ac9450786778deb198410d9721318b08c5984a23610b6b77",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.2663857936859131,
+          "happy": 0.0019893161952495575,
+          "sad": 0.4244751036167145,
+          "anger": 0.13151440024375916,
+          "fear": 0.15919968485832214,
+          "surprise": 0.010999283753335476,
+          "disgust": 0.005436387844383717
+        },
+        "full_label": "sad",
+        "four_scores": {
+          "neutral": 0.3231407105922699,
+          "happy": 0.002413150854408741,
+          "sad": 0.5149118304252625,
+          "anger": 0.1595342457294464
+        },
+        "four_label": "sad",
+        "discarded_mass": 0.17563535273075104
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.8815222842413097,
+          "happy": 5.598643393370445e-05,
+          "surprise": 0.0014377188264748056,
+          "sad": 0.10347989392193507,
+          "anger": 0.006736478547912002,
+          "disgust": 0.0008497442256922023,
+          "fear": 0.00030259111408846714,
+          "contempt": 0.005615302688654104
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.8888153312120188,
+          "happy": 5.644962323668665e-05,
+          "sad": 0.10433600810122232,
+          "anger": 0.006792211063522065
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.00820535685490958
+      },
+      "legacy_ms": 0.32640000063111074,
+      "ferplus_ms": 11.61839999986114
+    },
+    {
+      "index": 2,
+      "expected_label": "neutral",
+      "crop_sha256": "eccff6487495cf248923fae2d48d20c6b28883d754666a09440fc2e7d5b2cb46",
+      "gray_sha256": "8cee63c6ff53a2505a1828ecb21a324e84e500c056f546932c0024b5515782e8",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.3971191644668579,
+          "happy": 0.0002990277425851673,
+          "sad": 0.2849763333797455,
+          "anger": 0.1281236708164215,
+          "fear": 0.16792675852775574,
+          "surprise": 0.020036743953824043,
+          "disgust": 0.0015182223869487643
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.48995715379714966,
+          "happy": 0.0003689340373966843,
+          "sad": 0.35159772634506226,
+          "anger": 0.15807625651359558
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.189481720328331
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.8358813353977408,
+          "happy": 7.094106268077937e-05,
+          "surprise": 0.003136177738219718,
+          "sad": 0.14046580155025684,
+          "anger": 0.009404795061550399,
+          "disgust": 0.0016088072662422987,
+          "fear": 0.0008681815396917004,
+          "contempt": 0.008563960383617352
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.8479021518265156,
+          "happy": 7.196126669256304e-05,
+          "sad": 0.14248584140932716,
+          "anger": 0.009540045497464667
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.01417712692777107
+      },
+      "legacy_ms": 0.3152999997837469,
+      "ferplus_ms": 10.97710000067309
+    },
+    {
+      "index": 3,
+      "expected_label": "neutral",
+      "crop_sha256": "4a36de31131c8cb468b502e68ec62aabd0f8b7d5d4825b645c66358637753d06",
+      "gray_sha256": "8ffeefda6a8169297eadc51ee2580e95682e6b2a0b0814ba45c40c1180128ea0",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.5925523042678833,
+          "happy": 0.0005407921853475273,
+          "sad": 0.2393549084663391,
+          "anger": 0.09368803352117538,
+          "fear": 0.06868703663349152,
+          "surprise": 0.004412462469190359,
+          "disgust": 0.0007644629222340882
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.6398113369941711,
+          "happy": 0.0005839230725541711,
+          "sad": 0.2584446668624878,
+          "anger": 0.10116012394428253
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.07386396080255508
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.8585398885394603,
+          "happy": 3.7807448335523037e-05,
+          "surprise": 0.0010203619630862325,
+          "sad": 0.12004614638619508,
+          "anger": 0.01287662096839794,
+          "disgust": 0.0012413715977483003,
+          "fear": 0.0002559415381299444,
+          "contempt": 0.0059818615586468326
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.8658996342223453,
+          "happy": 3.813154883263753e-05,
+          "sad": 0.12107522973969634,
+          "anger": 0.012987004489125827
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.00849953665761131
+      },
+      "legacy_ms": 0.4151999992245692,
+      "ferplus_ms": 14.886800000567746
+    },
+    {
+      "index": 4,
+      "expected_label": "happy",
+      "crop_sha256": "4aa2a0deaef3dc4b6e5a65d460b774242612710a114a8136946d1bf6655b9eb6",
+      "gray_sha256": "019c163cfab98983b14367674014cbaa8dc43665b624d00103aa509c54ae1353",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.2167908251285553,
+          "happy": 0.6543098092079163,
+          "sad": 0.08608795702457428,
+          "anger": 0.012226506136357784,
+          "fear": 0.020336521789431572,
+          "surprise": 0.010123203508555889,
+          "disgust": 0.00012514431728050113
+        },
+        "full_label": "happy",
+        "four_scores": {
+          "neutral": 0.22363053262233734,
+          "happy": 0.6749531626701355,
+          "sad": 0.08880401402711868,
+          "anger": 0.01261225063353777
+        },
+        "four_label": "happy",
+        "discarded_mass": 0.030584868043661118
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.31857558080176596,
+          "happy": 0.6707385775305127,
+          "surprise": 0.0006175939621527908,
+          "sad": 0.0017548519363013461,
+          "anger": 0.0002303689489849115,
+          "disgust": 0.00022457409426950034,
+          "fear": 5.7142279563577416e-05,
+          "contempt": 0.007801310446449252
+        },
+        "full_label": "happy",
+        "four_scores": {
+          "neutral": 0.32137171421737243,
+          "happy": 0.6766256406414058,
+          "sad": 0.0017702542471946822,
+          "anger": 0.00023239089402713264
+        },
+        "four_label": "happy",
+        "discarded_mass": 0.008700620782435121
+      },
+      "legacy_ms": 0.3038000004380592,
+      "ferplus_ms": 15.988600000127917
+    },
+    {
+      "index": 5,
+      "expected_label": "happy",
+      "crop_sha256": "a7bdaa304c61bef478c2a1ca8bad2f4c4841348fc85f3486c74c21f7dd9133ad",
+      "gray_sha256": "9e49b4bbd7ecc9ac6e3271744f209666a3f82505afa688bc0bef8e5c62de9fa7",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.4084987938404083,
+          "happy": 0.1378205567598343,
+          "sad": 0.16374503076076508,
+          "anger": 0.11338740587234497,
+          "fear": 0.11158828437328339,
+          "surprise": 0.058726321905851364,
+          "disgust": 0.006233539432287216
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.49608099460601807,
+          "happy": 0.1673693060874939,
+          "sad": 0.19885198771953583,
+          "anger": 0.13769768178462982
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.17654815316200256
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.9393076805745095,
+          "happy": 0.00015342544147054624,
+          "surprise": 0.0013913819810801847,
+          "sad": 0.0317597079966483,
+          "anger": 0.01707976745172309,
+          "disgust": 0.0015473943419534997,
+          "fear": 0.00020207958753271776,
+          "contempt": 0.008558562625082242
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.9504271253010396,
+          "happy": 0.0001552416788455369,
+          "sad": 0.032135676728622754,
+          "anger": 0.017281956291492036
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.011699418535648643
+      },
+      "legacy_ms": 0.19720000000233995,
+      "ferplus_ms": 8.322600000610691
+    },
+    {
+      "index": 6,
+      "expected_label": "happy",
+      "crop_sha256": "1e7b9f6e66226b62cc75660f6b535ca645267b248c917ca4463aa994465c59b5",
+      "gray_sha256": "28588a247ec323debd2842ca8c6827b7552f8fa0eaefbccf46134153aa0d31d1",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.06747003644704819,
+          "happy": 0.9156315326690674,
+          "sad": 0.011705867946147919,
+          "anger": 0.00030469949706457555,
+          "fear": 0.003500745864585042,
+          "surprise": 0.0013276198878884315,
+          "disgust": 5.954628068138845e-05
+        },
+        "full_label": "happy",
+        "four_scores": {
+          "neutral": 0.06780143827199936,
+          "happy": 0.9201290011405945,
+          "sad": 0.011763365939259529,
+          "anger": 0.0003061961324419826
+        },
+        "four_label": "happy",
+        "discarded_mass": 0.004887911956757307
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.12772637737830975,
+          "happy": 0.8689631095759549,
+          "surprise": 0.00011071947496269584,
+          "sad": 0.0003023218780404133,
+          "anger": 4.185798020562459e-05,
+          "disgust": 4.309194775923643e-05,
+          "fear": 5.931466600501014e-06,
+          "contempt": 0.002806590298166829
+        },
+        "full_label": "happy",
+        "four_scores": {
+          "neutral": 0.1281063835954983,
+          "happy": 0.8715484125566252,
+          "sad": 0.0003032213335452634,
+          "anger": 4.198251433117941e-05
+        },
+        "four_label": "happy",
+        "discarded_mass": 0.0029663331874892626
+      },
+      "legacy_ms": 0.16850000065460335,
+      "ferplus_ms": 7.858099999793922
+    },
+    {
+      "index": 7,
+      "expected_label": "sad",
+      "crop_sha256": "667e91bc95ba6f584889699189613abb2afd2460ffe982cf862f7a2fb10be04b",
+      "gray_sha256": "ed198c23ccb1fcd7418ac3405f775d2c4a13b4aedffda0e142178b175f5b0e05",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.4565437436103821,
+          "happy": 0.0008045420981943607,
+          "sad": 0.2875259518623352,
+          "anger": 0.14922119677066803,
+          "fear": 0.08881206810474396,
+          "surprise": 0.0028802668675780296,
+          "disgust": 0.014212152920663357
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.5106208324432373,
+          "happy": 0.0008998392149806023,
+          "sad": 0.3215830624103546,
+          "anger": 0.1668962836265564
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.1059044897556305
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.3636133604097674,
+          "happy": 0.00035779129240067354,
+          "surprise": 0.0025181607988921705,
+          "sad": 0.47310478667543576,
+          "anger": 0.061934273688837235,
+          "disgust": 0.054741638403191864,
+          "fear": 0.0062848414170819196,
+          "contempt": 0.03744514731439303
+        },
+        "full_label": "sad",
+        "four_scores": {
+          "neutral": 0.4044596552179039,
+          "happy": 0.00039798356859402514,
+          "sad": 0.5262507370055003,
+          "anger": 0.06889162420800177
+        },
+        "four_label": "sad",
+        "discarded_mass": 0.10098978793355898
+      },
+      "legacy_ms": 0.1472000003559515,
+      "ferplus_ms": 8.429500000602275
+    },
+    {
+      "index": 8,
+      "expected_label": "sad",
+      "crop_sha256": "fd350b55e7ca2b10e0e727d02f8a249a8db63fd40a4adf45d69878a1b10fc920",
+      "gray_sha256": "127bf6a7511cf111f735c22e5a85ddf163d0c4c31efd23e7b55f9ab3cecb4476",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.24819345772266388,
+          "happy": 0.00013588560977950692,
+          "sad": 0.523442268371582,
+          "anger": 0.12722061574459076,
+          "fear": 0.09465911984443665,
+          "surprise": 0.0018931064987555146,
+          "disgust": 0.004455545451492071
+        },
+        "full_label": "sad",
+        "four_scores": {
+          "neutral": 0.2760796546936035,
+          "happy": 0.000151153260958381,
+          "sad": 0.5822544693946838,
+          "anger": 0.14151470363140106
+        },
+        "four_label": "sad",
+        "discarded_mass": 0.10100776702165604
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.5500845564457804,
+          "happy": 0.0001723047612697756,
+          "surprise": 0.0020289122311648645,
+          "sad": 0.30981750542249326,
+          "anger": 0.07498838850726464,
+          "disgust": 0.030894534934556683,
+          "fear": 0.002509186038885014,
+          "contempt": 0.02950461165858541
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.5882862443444217,
+          "happy": 0.00018427079928401796,
+          "sad": 0.33133338240722054,
+          "anger": 0.08019610244907377
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.06493724486319197
+      },
+      "legacy_ms": 0.18060000002151355,
+      "ferplus_ms": 9.920299999976123
+    },
+    {
+      "index": 9,
+      "expected_label": "sad",
+      "crop_sha256": "5a7d7fa3bf477ff06b069e2b132399df4a4fd9aefe2244a96c3801c59c76a712",
+      "gray_sha256": "14c49760b43f1bbf1c12704270d00aaa558588219bb9991cf788463093a426c9",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.12536199390888214,
+          "happy": 7.476762402802706e-05,
+          "sad": 0.5660958290100098,
+          "anger": 0.14927935600280762,
+          "fear": 0.1491749882698059,
+          "surprise": 0.0021877388935536146,
+          "disgust": 0.007825308479368687
+        },
+        "full_label": "sad",
+        "four_scores": {
+          "neutral": 0.14909635484218597,
+          "happy": 8.892312325770035e-05,
+          "sad": 0.6732727885246277,
+          "anger": 0.17754189670085907
+        },
+        "four_label": "sad",
+        "discarded_mass": 0.15918804705142975
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.4887875900162769,
+          "happy": 0.00015438849432643622,
+          "surprise": 0.0012019546452850052,
+          "sad": 0.4093578273784903,
+          "anger": 0.04908965188064423,
+          "disgust": 0.024747397110324795,
+          "fear": 0.0019287665901310863,
+          "contempt": 0.024732423884521255
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.5159309996618902,
+          "happy": 0.00016296201425956779,
+          "sad": 0.432090334150609,
+          "anger": 0.051815704173241314
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.05261054223026214
+      },
+      "legacy_ms": 0.16709999999875436,
+      "ferplus_ms": 9.105999999519554
+    },
+    {
+      "index": 10,
+      "expected_label": "anger",
+      "crop_sha256": "c94b0594c35118850d1564e0e52a9719a29f39f8a7509cc1c81d717a65f44038",
+      "gray_sha256": "bde28cfcf80335130c9330f53862354048f635748d9ff5cbc66169e1fa2082c5",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.3950040638446808,
+          "happy": 0.006475338712334633,
+          "sad": 0.214786559343338,
+          "anger": 0.2968572676181793,
+          "fear": 0.07078249752521515,
+          "surprise": 0.014525390230119228,
+          "disgust": 0.0015689543215557933
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.4325857162475586,
+          "happy": 0.007091417908668518,
+          "sad": 0.23522187769412994,
+          "anger": 0.32510098814964294
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.08687683939933777
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.2569132022316214,
+          "happy": 0.0005702560694637452,
+          "surprise": 0.022590471282286587,
+          "sad": 0.005257019281494777,
+          "anger": 0.6144724049992009,
+          "disgust": 0.07093191484241929,
+          "fear": 0.003835795537329107,
+          "contempt": 0.025428935756184105
+        },
+        "full_label": "anger",
+        "four_scores": {
+          "neutral": 0.2928744063533174,
+          "happy": 0.0006500771714448475,
+          "sad": 0.005992866025887023,
+          "anger": 0.7004826504493507
+        },
+        "four_label": "anger",
+        "discarded_mass": 0.12278711741821907
+      },
+      "legacy_ms": 0.19080000038229628,
+      "ferplus_ms": 9.916699999848788
+    },
+    {
+      "index": 11,
+      "expected_label": "anger",
+      "crop_sha256": "5a5abf642664353ee1b39969367b5a4633ae4a1c789bd836d5ba41dbb2445f5f",
+      "gray_sha256": "e74b64240dc6dddf0314ebfdbbf366e22ec9385c2f2ea8442471464337d3d328",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.36562594771385193,
+          "happy": 0.0008534573134966195,
+          "sad": 0.16288480162620544,
+          "anger": 0.2948216497898102,
+          "fear": 0.13732711970806122,
+          "surprise": 0.03610086441040039,
+          "disgust": 0.002386178821325302
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.4436207413673401,
+          "happy": 0.0010355155682191253,
+          "sad": 0.19763115048408508,
+          "anger": 0.35771259665489197
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.1758141666650772
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.3919837389149583,
+          "happy": 0.0006310039499635632,
+          "surprise": 0.04823664491107177,
+          "sad": 0.007770682819570121,
+          "anger": 0.4608247781987797,
+          "disgust": 0.054690290979187005,
+          "fear": 0.0067483002193121505,
+          "contempt": 0.029114560007157505
+        },
+        "full_label": "anger",
+        "four_scores": {
+          "neutral": 0.4551545454843307,
+          "happy": 0.0007326944654374874,
+          "sad": 0.009022980434429872,
+          "anger": 0.535089779615802
+        },
+        "four_label": "anger",
+        "discarded_mass": 0.13878979611672843
+      },
+      "legacy_ms": 0.16200000027311035,
+      "ferplus_ms": 10.139600000002247
+    },
+    {
+      "index": 12,
+      "expected_label": "anger",
+      "crop_sha256": "341be3c3940433a8dd0b95b136ab677eb791e38eab0509c5f141f71261f8b812",
+      "gray_sha256": "0a4239da16086da8aedfb744ef114633f7327355df25a54b200e861d51393d8c",
+      "legacy": {
+        "full_scores": {
+          "neutral": 0.2511415481567383,
+          "happy": 0.0011258723679929972,
+          "sad": 0.326557457447052,
+          "anger": 0.22386063635349274,
+          "fear": 0.12756113708019257,
+          "surprise": 0.06268131732940674,
+          "disgust": 0.00707197654992342
+        },
+        "full_label": "sad",
+        "four_scores": {
+          "neutral": 0.3128766417503357,
+          "happy": 0.0014026319840922952,
+          "sad": 0.40683114528656006,
+          "anger": 0.27888959646224976
+        },
+        "four_label": "sad",
+        "discarded_mass": 0.19731442630290985
+      },
+      "ferplus": {
+        "full_scores": {
+          "neutral": 0.6999988103558974,
+          "happy": 0.0002747679608144369,
+          "surprise": 0.03303351165599572,
+          "sad": 0.012505280431509561,
+          "anger": 0.2145715740846957,
+          "disgust": 0.017849617709568874,
+          "fear": 0.0035987010784692373,
+          "contempt": 0.01816773672304901
+        },
+        "full_label": "neutral",
+        "four_scores": {
+          "neutral": 0.7548374223727977,
+          "happy": 0.00029629355967955047,
+          "sad": 0.013484956698955537,
+          "anger": 0.23138132736856723
+        },
+        "four_label": "neutral",
+        "discarded_mass": 0.07264956716708285
+      },
+      "legacy_ms": 0.7574000001113745,
+      "ferplus_ms": 8.677499999976135
+    }
+  ]
+}

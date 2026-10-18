@@ -425,6 +425,52 @@ Multimodal-Recognition/
 - 驗證：`python -B -m unittest discover -s tests -q` 全專案 119 項通過；`python -B scripts/capture_face_samples.py --help` 正常。另用實際 ONNX 對全黑／全白／固定種子亂數三組合成輸入，比對正式 `VideoEmotionModel._predict_onnx()` 四類結果通過，未計算人臉準確率。以記憶體合成色塊檢視 960x370 擷取版面，未發現標題、圖片、數值與狀態列重疊。
 - 本次尚未收集使用者臉部照片，未開啟真實攝影機／GUI、未驗證實際鍵盤或樹莓派。沒有修改正式推論、模型、config、語音或前端，沒有重訓、刪除資料或執行 git add／commit／push。下一步由使用者固定距離與光線完成擷取，再檢視難過／生氣誤判是否與裁切、原始七類分布或四類正規化有關，尚不直接決定重訓。
 
+## FERPlus 預訓練模型同照片比較（2026-10-18）
+- 使用者已完成 `data/datasets/local_faces/session_20261018_190005_599916/`，四類各 3 張。原始診斷的四類符合預期數為 neutral 2/3、happy 2/3、sad 2/3、anger 0/3，共 6/12；全部使用 Haar 偵測，七類與四類最高類別相同。這是單人預期表情一致率，不是正式準確率，不代表使用者的內在情緒。
+- 經使用者確認，新增獨立 `scripts/compare_face_models.py`：只讀現有照片，比較原本七類 CNN 與外部已訓練的 Emotion FERPlus，不接入 app.py、不修改 config、不重訓、不開相機或麥克風、不重新偵測裁切，也不上傳照片。正式影像模型仍維持原檔。
+- FERPlus 來源為 ONNX Model Zoo，固定 Git revision `c5cae0f1942c8d7727372c7b1f6b485aa39e4421` 下的 `validated/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-8.onnx`。核對上游 Git LFS pointer 的 SHA-256 `a2a2ba6a335a3b29c21acb6272f962bd3d47f84952aaffa03b60986e04efa61c` 與長度 35,040,571 bytes；下載後雜湊／大小吻合，ONNX checker 通過。權重約 35 MB（33.42 MiB），置於既有 Git ignore 涵蓋的 `.cache/ferplus/`，沒有下載資料集或整個模型庫。
+- 只有明確加 `--download-model` 才會連線下載固定來源；預設比較離線執行。下載使用新時間戳暫存檔，驗證成功才改名，失敗保留暫存不刪除。既有模型雜湊不符會停止，不覆蓋。此工作另保存上游 README、倉庫 LICENSE 及 `source.json` 來源紀錄。
+- 授權說明需保留差異：模型子目錄 README 標示 MIT，ONNX Model Zoo 根 LICENSE 與 Hugging Face metadata 標示 Apache-2.0。本次保存上游原文並僅作本機比較，不自行宣稱權重再散布條件已完全釐清；若未來提交或散布第三方模型，須先確認並附上適用聲明。上游說明：https://raw.githubusercontent.com/onnx/models/c5cae0f1942c8d7727372c7b1f6b485aa39e4421/validated/vision/body_analysis/emotion_ferplus/README.md 。
+- 輸入核對：完整 12 張 session、預期順序與編號、原模型雜湊、七類順序、個別 JSON 與 summary 一致、PNG 雜湊、尺寸、檔名不越出資料夾、無重複圖片路徑。由原裁切重算 48x48 灰階並逐像素比對保存的 gray；再用原 ONNX 重算，確認最高類別及機率與擷取紀錄相符。任一項不符停止，不跳過有問題的照片以提高分數。
+- 舊模型沿用 OpenCV BGR→灰階→48x48 linear resize→float32 /255、NCHW，讀取既有 Softmax。FERPlus 使用相同原始 BGR 裁切，先 OpenCV 灰階，再 Pillow LANCZOS 縮放至 64x64，float32 保持 0..255、NCHW；不把舊的 48x48 放大、不除以 255。實際 FERPlus 圖包含輸入 Sub／Div，末端 Add 輸出 logits，因此後處理只做一次穩定 Softmax。
+- FERPlus 原始順序為 neutral/happiness/surprise/sadness/anger/disgust/fear/contempt；只統一 happiness→happy、sadness→sad 的名稱。四類依索引 `[0,1,3,4]` 選取後正規化，不可取前四個，也不把其他情緒硬合併；完整八類及排除的四類機率另保留。四類總和為零時記錄拒判。沒有加權、時間平滑或依這批照片調整門檻。
+- 執行：`python scripts/compare_face_models.py --session data/datasets/local_faces/session_20261018_190005_599916`。第一次沒有候選權重時才加 `--download-model`；本機已下載，不必再加。預設每次建立新時間戳報告目錄；`--output` 可指定新目錄，既有目錄一律拒絕覆蓋。本次固定結果為 `data/reports/face_model_comparison_20261018_v1/`，含中文 `report.md` 與 `summary.json`，沒有複製照片。完成 JSON 最後才寫入，缺少時不能視為完整報告。
+- 本次結果（完整類別及限定四類的最高類別均一致）：
+  | 預期表情 | 原模型符合 | FERPlus 符合 |
+  | --- | --- | --- |
+  | neutral | 2/3 | 3/3 |
+  | happy | 2/3 | 2/3 |
+  | sad | 2/3 | 1/3 |
+  | anger | 0/3 | 2/3 |
+  | 合計 | 6/12（50%） | 8/12（66.7%） |
+- 差異：01 中性由 sad 改為 neutral；07 難過由 neutral 改為 sad，但 08／09 難過由 sad 改為 neutral；10／11 生氣改判 anger，12 仍未符合預期。新模型改善中性／生氣，但難過退步，不能宣稱全面勝出；更不能把這批 66.7% 寫成獨立測試集準確率。這批可篩選候選，後續需新照片、其他人及樹莓派驗證，不以同批樣本反覆調參後當獨立測試。
+- 本機 Windows／ONNX Runtime CPUExecutionProvider、intra threads=2／inter threads=1，預熱後 12 次 session.run 中位數：舊模型約 0.19 ms、FERPlus 約 9.92 ms。只計模型呼叫，不含讀圖／前處理／偵測／GUI，也不是嚴格效能基準或樹莓派即時效能；環境版本與逐張時間保存在 JSON。候選比舊模型慢，不能由檔案小就宣稱樹莓派部署已通過。
+- 新增 `tests/test_face_model_comparison.py` 14 項測試，涵蓋 raw 灰階／LANCZOS／來源不變、八類索引、保留排除類別、穩定 Softmax 與拒判、無效輸出與雜湊、路徑安全、完整 session／sidecar／gray 一致性、重複路徑、拒絕覆蓋、拒判仍計入分母與原結果重現。測試不寫入或刪除測試照片。`python -B -m unittest discover -s tests -q` 全專案 133 項通過，CLI `--help` 通過。
+- 另獨立讀回報告重算兩模型完整／四類一致數及正規化，確認重跑同輸出位置被拒絕且兩份報告不變；既有 config、models 與本次照片 session 共 167 個檔案 SHA-256 前後一致。`requirements_train.txt` 補列診斷工具直接使用的 `pillow>=9.1,<13`，本機原有 Pillow 12.2.0，沒有安裝／升級套件。
+- 本次僅新增比較工具、測試、報告、候選模型快取與來源紀錄，補列 Pillow 並追加本節；沒有刪除任何資料、修改正式推論／設定或舊模型，沒有 git add、commit 或 push。尚未改成正式使用 FERPlus，下一步可另行規劃獨立即時預覽與新樣本驗證，不能假設已支援正式 PC／RPi 管線。
+
+## 筆電 FERPlus 獨立即時預覽（2026-10-18）
+- 新增 `scripts/preview_ferplus.py`，讓使用者手動在筆電啟動 FERPlus 攝影機預覽。只新增獨立工具，不接入 app.py、前後端、融合或資料庫，不修改正式模型路徑，也不切換／合併樹莓派分支。保留前次 FERPlus 比較工具及報告等尚未提交的工作。
+- 啟動指令（專案根目錄、啟用 .venv，先關閉 app.py 或其他占用相機的程式）：`python scripts/preview_ferplus.py`。可用 `--camera-id 1` 單次選相機，`--config config/config.yaml` 只讀取相機／偵測設定，`--max-frames 30` 限制實際讀取畫面數；預設持續到 Q／Esc／關閉視窗／Ctrl+C。`--help` 不開相機。
+- 固定使用前節已下載的 `.cache/ferplus/emotion-ferplus-8.onnx`，先驗證 SHA-256、64x64 float NCHW 輸入及八類輸出，再建立視窗／相機。缺少模型或雜湊不符會停止，不自動下載、不改用 heuristic 或舊模型。這不是任意 ONNX 模型的通用預覽器。
+- 重用 `compare_face_models.py` 的 `open_session()`、`fer_tensor()`、`fer_scores()`，保留相同 CPU 執行設定、OpenCV 灰階→Pillow LANCZOS 64x64→float32 0..255 NCHW、一次 Softmax、完整八類及四類 `[0,1,3,4]` 對應。預覽右欄直接使用實際送進模型的 tensor 轉回 uint8，而非人臉預覽工具的 linear resize 結果。
+- 視窗為固定 960x560，上方並排相機／人臉裁切／64x64 灰階，下方顯示 FULL (8) 原始最高類別與機率、FOUR (relative) 限定四類的相對分數、Excluded mass 排除機率及八類機率條。八類名稱為 neutral／happy／surprise／sad／anger／disgust／fear／contempt；未將其他情緒硬合併。保持既有 OpenCV 診斷視窗的英文文字，沒有改動前端中英切換。
+- 每個有效畫面偵測一次，找到臉就執行一次分類；不使用正式管線的 frame_skip、舊結果快取、時間平滑、門檻或類別加權。因此逐格分數可能跳動，不能把跳動直接視為程式故障，也不能把分數當準確率。無臉時清空裁切／灰階／全部分數，不保留上一個情緒；若四類保留機率總和為零，顯示 Abstain 而非 neutral 100%。
+- Model inference 顯示單次 session.run 毫秒數，不含人臉偵測、前處理、畫面繪製或相機讀取，亦沒有排除第一次模型冷啟動；不是 FPS、端到端延遲或樹莓派效能。實際可用性、即時辨識與兩平台表現仍須實機測試。
+- GUI 無法建立時不開相機；相機讀取或推論出錯時會離開並釋放相機、關閉偵測器與視窗。工具沒有照片／影片／推論記錄寫入及上傳路徑，也不啟動語音、Web 後端或模型下載；使用者啟動時，既有人臉偵測器仍可能建立資源快取，不能把「不存影像」解讀為所有相依套件完全不寫快取。
+- 新增 `tests/test_ferplus_preview.py` 的 12 項測試：預覽 tensor／機率與離線共用流程一致、來源影像不變、無臉不推論且清除前次資料、固定版面與文字邊界、完整類別及四類拒判顯示、Q／關窗／畫面上限／讀圖失敗／推論失敗的資源釋放、headless 不開相機，以及模型缺失／雜湊錯誤先停止。全專案 `python -B -m unittest discover -s tests -q` 共 145 項通過，CLI `--help` 正常。
+- 另外用真實 FERPlus ONNX 與原 12 張裁切，在模擬偵測框下執行新 `process_frame()`，完整八類機率及最高類別與先前離線報告全部一致；不產生新照片或報告。以記憶體合成色塊目視檢查版面，沒有標題／圖片／數值／機率條重疊；未儲存該合成圖。
+- 助理未開啟真實攝影機／GUI、未驗證使用者實際鍵盤及關窗操作、未測樹莓派，沒有宣稱難過辨識改善。下一步由使用者先觀察生氣是否較容易辨識、難過是否仍偏中性，以及移出畫面時是否清空結果，再決定是否值得進一步整合。
+- 本次只新增預覽腳本與測試並追加本節；沒有新增依賴、下載模型、刪除資料或執行 git add／commit／push，既有模型、設定與照片保留。
+
+## FERPlus 筆電實測回饋（2026-10-18）
+- 使用者自行操作獨立即時預覽後，主觀認為整體辨識體驗改善；尚未記錄固定次數、逐次預測或其他人的結果，因此不是正式準確率，也不能據此宣稱四類都比原模型好。
+- 生氣：使用者感覺與原本差不多，但同時脫掉眼鏡並加大表情時可以辨識。眼鏡與表情強度同時改變，不能認定眼鏡或反光就是唯一原因；日常戴眼鏡仍應是後續驗證情境，不要求使用者永久摘眼鏡。
+- 難過：偶爾被判為 neutral，sad／neutral 混淆仍存在，尚未量化改善幅度。使用者未指明觀察的是 FULL (8) 或 FOUR (relative)，後續比較須固定讀取同一欄位。
+- 無臉：使用者確認移出畫面後會清空結果。這是筆電實測回報，不代表助理已操作硬體或樹莓派已驗證。
+- 暫時保留 FERPlus 為候選，不自動取代正式模型。若後續確認整合，先在筆電加入可選模型並保留原模型回退，再另行測試樹莓派；本次尚未實作整合或調整門檻。
+- 本次僅追加實測觀察至 AGENTS.md，未修改程式、模型、設定或既有資料，未執行 git add／commit／push。文件更新以 git diff --check 檢查格式，不把既有單元測試或主觀體驗當準確率證明。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）
