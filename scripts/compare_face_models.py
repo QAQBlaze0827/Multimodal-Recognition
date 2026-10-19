@@ -15,23 +15,20 @@ import urllib.request
 import cv2
 import numpy as np
 import onnxruntime as ort
-from PIL import Image, __version__ as PILLOW_VERSION
+from PIL import __version__ as PILLOW_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.capture_face_samples import LABELS, MODEL_SHA256, TARGETS, predict_scores, write_json
+from src.video.ferplus import FER_LABELS, FER_PATH, FER_SHA256, fer_scores, fer_tensor
 
 REVISION = "c5cae0f1942c8d7727372c7b1f6b485aa39e4421"
 UPSTREAM = "validated/vision/body_analysis/emotion_ferplus"
 RAW = f"https://raw.githubusercontent.com/onnx/models/{REVISION}"
 MODEL_URL = f"https://media.githubusercontent.com/media/onnx/models/{REVISION}/{UPSTREAM}/model/emotion-ferplus-8.onnx"
-FER_SHA256 = "a2a2ba6a335a3b29c21acb6272f962bd3d47f84952aaffa03b60986e04efa61c"
 FER_BYTES = 35040571
-FER_PATH = ROOT / ".cache/ferplus/emotion-ferplus-8.onnx"
-# Official happiness/sadness names are canonicalized, not merged with other classes.
-FER_LABELS = ("neutral", "happy", "surprise", "sad", "anger", "disgust", "fear", "contempt")
 FOUR = LABELS[:4]
 
 
@@ -125,30 +122,6 @@ def load_samples(folder):
             raise ValueError("Saved grayscale differs from original crop preprocessing")
         result.append((item, crop, gray))
     return result, digest(raw)
-
-
-def fer_tensor(crop):
-    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-    resized = Image.fromarray(gray).resize((64, 64), Image.Resampling.LANCZOS)
-    # FERPlus expects raw 0..255 grayscale, NOT the legacy model's /255 input.
-    return np.asarray(resized, dtype=np.float32).reshape(1, 1, 64, 64)
-
-
-def fer_scores(logits):
-    values = np.asarray(logits, dtype=np.float64).reshape(-1)
-    if values.size != 8 or not np.isfinite(values).all():
-        raise ValueError("Expected eight finite FERPlus logits")
-    exp = np.exp(values - values.max())
-    probs = exp / exp.sum()
-    selected = probs[[0, 1, 3, 4]]
-    mass = float(selected.sum())
-    return {
-        "full_scores": dict(zip(FER_LABELS, probs.tolist())),
-        "full_label": FER_LABELS[int(probs.argmax())],
-        "four_scores": dict(zip(FOUR, (selected / mass).tolist())) if mass > 0 else None,
-        "four_label": FOUR[int(selected.argmax())] if mass > 0 else None,
-        "discarded_mass": float(probs[[2, 5, 6, 7]].sum()),
-    }
 
 
 def legacy_scores(session, name, gray, saved):

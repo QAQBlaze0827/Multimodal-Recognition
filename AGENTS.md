@@ -471,6 +471,24 @@ Multimodal-Recognition/
 - 暫時保留 FERPlus 為候選，不自動取代正式模型。若後續確認整合，先在筆電加入可選模型並保留原模型回退，再另行測試樹莓派；本次尚未實作整合或調整門檻。
 - 本次僅追加實測觀察至 AGENTS.md，未修改程式、模型、設定或既有資料，未執行 git add／commit／push。文件更新以 git diff --check 檢查格式，不把既有單元測試或主觀體驗當準確率證明。
 
+## 正式流程可選 FERPlus（2026-10-19）
+- 經使用者確認，將 FERPlus 接入筆電既有推論流程，但不取代預設模型。`src/main.py` 新增 `--video-model {legacy,ferplus}`，預設 legacy，仍讀取原本 `video.model.path` 與 `input_size`；`python app.py` 行為不會自動切成 FERPlus。未修改 config.yaml、音訊模型、融合權重、前端、資料庫 schema 或樹莓派分支。
+- 新增 `src/video/ferplus.py`：將既有比較工具的 FERPlus 路徑／雜湊／標籤與 `fer_tensor()`、`fer_scores()` 移為共用實作；`scripts/compare_face_models.py` 改為匯入，因此離線比較、獨立預覽與正式推論使用相同的前後處理，正式程式不依賴 scripts。仍是 BGR→灰階→Pillow LANCZOS 64x64→float32 0..255 NCHW、八類 logits 做一次 Softmax，選 `[0,1,3,4]` 後正規化，不硬合併其他類別。
+- `FerPlusEmotionModel` 固定讀取 repo 下 `.cache/ferplus/emotion-ferplus-8.onnx`，檢查先前核對的 SHA-256，再用既有 `create_ort_session()` 載入，驗證 float32 `[1,1,64,64]` 輸入及 `[1,8]` 輸出。模型缺失、雜湊錯誤、載入失敗或格式不符時停止，不下載、不改用舊模型或 heuristic；模型驗證放在開相機／音訊／日誌之前。啟動時印出所選模型、backend 與路徑；`--audio-only` 不允許搭配 `--video-model ferplus`。
+- 正式結果保持既有 `EmotionResult` 格式，source 為 video，backend 為 onnx-ferplus，交給原本的融合與 CSV／SQLite 紀錄流程。前端收到的依然是四類結果，對應獨立預覽的 FOUR (relative)，不是 FULL (8)；正式資料庫未新增完整八類或排除機率欄位。四類相對分數不是準確率或已校準的可信度，排除類別機率很高時仍可能出現高四類分數，需配合獨立預覽診斷；本次沒有另設門檻或調整融合來掩蓋此限制。四類總和為零時沿用 confidence=0 的無效結果，不作為中性 100% 有效判斷。
+- `src/video/inference.py` 在無臉時清除舊分類快取，重新偵測到臉時立即分類，避免 frame_skip 使前一個人的結果短暫回來；這個修正同時適用舊模型與 FERPlus。持續有臉時仍保留原本 frame_skip 設定，與獨立預覽每格分類的更新頻率不同。
+- PC 的 `requirements.txt` 補列 `pillow>=9.1,<13`，因為正式 FERPlus 前處理需要 Pillow；本機原本已有，沒有安裝或升級套件。只有選 FERPlus 才匯入新模組，舊模型啟動不強制匯入 Pillow。本次未修改 requirements_rpi.txt 或測試 ARM；之後樹莓派整合仍須核對依賴、Pi Camera、INMP441 及實機速度，不能只複製模型就宣稱可用。
+- 啟動方式（專案根目錄、已啟用 .venv）：`python app.py --vision-only --video-model ferplus` 只測影像；`python app.py --video-model ferplus` 啟用原本影像與音訊融合；不需要 OpenCV 視窗時加 `--no-display`。使用前端時仍另外執行 `python backend/app.py --host 127.0.0.1 --port 8000`，開啟 `http://127.0.0.1:8000`；app.py 本身不會啟動 Web 伺服器。切回舊模型可重新執行 `python app.py` 或明確加 `--video-model legacy`，不必改設定檔；不要同時開兩個程式占用同一台相機。
+- 日誌注意：以上是正式 app.py，會沿用 config 的 CSV／SQLite 寫入，不等同不存資料的獨立預覽。現有 DbLogger.close() 仍會清理超過 retention_days（目前 30 天）的資料，本次沒有改變這項既有行為；需要保留全部歷史資料時，不應直接照預設設定做正式實機測試，須先另外確認停用清理或隔離測試資料庫的方案。本次助理未啟動真實日誌、資料庫清理、攝影機或麥克風，沒有刪除資料。
+- 新增 `tests/test_ferplus_integration.py` 的 18 項測試，涵蓋共用前後處理、四類索引、無效輸出／零保留機率、缺檔／錯誤雜湊／載入失敗／模型格式拒絕、CLI 選擇、舊模型路徑保持、音訊 face-gating／融合、無臉快取清除與重新入鏡、既有前端資料欄位相容，以及推論例外時釋放資源。相機、音訊、CSV 與資料庫皆使用模擬，不建立或刪除測試音檔／照片／資料庫。
+- 驗證：`python -B -m unittest discover -s tests -q` 全專案 163 項通過，`python -B app.py --help` 正常。另讀取原 12 張照片與前次固定報告，使用真實 FERPlus ONNX 經正式 `VideoEmotionPipeline`（模擬偵測框、frame_skip=1）推論，分類全部與獨立預覽及固定報告一致，四類機率最大差約 2.22e-16；未產生新照片或報告。這是接入一致性驗證，不是新增獨立準確率測試，亦未開啟瀏覽器驗證端到端即時畫面。
+- 本次沒有重訓、下載、安裝套件、覆蓋既有模型或照片，沒有執行 git add／commit／push。下一步由使用者在保留資料的測試設定下驗證筆電真人影像、前端與融合；樹莓派部署及是否把 FERPlus 改成預設仍待另行確認。
+
+## 正式接入後的使用者回饋（2026-10-19）
+- 使用者回報已自行測試，主觀感覺目前辨識蠻準；未提供此次啟動指令、所看欄位、樣本數或逐類結果，因此先記錄為正向體驗回饋，不宣稱量化準確率提高，也不假設已完成前端／融合／樹莓派驗證。
+- 建議後續小規模驗收：先確認啟動訊息為 model=ferplus，單看臉部表情欄位；固定光線與距離，每類表情做 5 次，每次先指定預期類別並固定觀察時點，不等到猜對才記錄。另測日常戴眼鏡、稍微轉頭／遠近、離開再入鏡，及 2 至 3 位組員。記錄預期／實際類別與條件，先找重複誤判，不把這種小規模操作測試當正式測試集準確率。
+- 本次只追加文件並提供明確檔案清單的 commit 指令，未代為執行 add／commit／push、未修改程式或模型、未啟動日誌與清理。既有正式程式的 30 天資料清理注意事項仍適用；未追蹤的舊訓練資料夾保持不動。
+
 ## WSL 開發環境
 ```bash
 # 安裝 Node.js 20（opencode 需要）

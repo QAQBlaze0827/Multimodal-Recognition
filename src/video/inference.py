@@ -27,7 +27,10 @@ class VideoEmotionPipeline:
     def process(self, frame) -> VideoInferenceResult:
         face = self.detector.detect(frame)
         if face is None:
-            return VideoInferenceResult(None, EmotionResult.neutral("video"), self.model.backend)
+            self.cached = EmotionResult.neutral("video")
+            # Classify immediately on reacquisition instead of showing the previous person's result.
+            self.counter = self.frame_skip - 1
+            return VideoInferenceResult(None, self.cached, self.model.backend)
 
         self.counter += 1
         if self.counter >= self.frame_skip:
