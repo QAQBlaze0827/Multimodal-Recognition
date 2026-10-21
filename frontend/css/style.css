@@ -139,6 +139,27 @@ main {
 .view { display: none; }
 .view.active { display: block; }
 
+.live-freshness {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+    padding: 0.25rem 0 0.75rem;
+    font-size: 0.85rem;
+}
+
+.live-freshness > div { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
+.live-freshness span { color: var(--text-secondary); overflow-wrap: anywhere; }
+.live-freshness strong { color: var(--warning); }
+.live-freshness[data-state="fresh"] strong { color: var(--success); }
+.live-freshness[data-state="disconnected"] strong { color: var(--danger); }
+#view-live.is-stale > .card,
+#view-live.is-stale > .grid-2,
+#view-live.is-stale > .grid-3 { opacity: 0.55; }
+
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border);

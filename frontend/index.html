@@ -13,7 +13,7 @@
 <header>
     <h1><span class="dot"></span> <span id="app-title">多模態情緒辨識儀表板</span></h1>
     <div class="header-actions">
-        <span class="status"><span id="ws-label">連線：</span><span id="ws-status" data-state="connecting">連線中...</span></span>
+        <span class="status"><span id="ws-label">後端連線：</span><span id="ws-status" data-state="connecting">連線中...</span></span>
         <button id="lang-toggle" type="button" class="lang-toggle">EN</button>
     </div>
 </header>
@@ -29,6 +29,13 @@
 
 <!-- ==================== LIVE VIEW ==================== -->
 <section id="view-live" class="view active">
+    <div id="live-freshness" class="live-freshness" data-state="waiting">
+        <div role="status" aria-live="polite">
+            <strong id="live-data-label">等待辨識資料</strong>
+            <span id="live-data-note">尚未收到辨識紀錄</span>
+        </div>
+        <span id="live-last-update">最後資料時間：--</span>
+    </div>
     <div class="card live-summary">
         <div>
             <h2>目前判讀</h2>

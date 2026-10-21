@@ -5,6 +5,8 @@ let replayTimer = null;
 let replaySpeed = 1;
 let liveTrend = [];
 let lastLiveData = null;
+let lastLiveReceivedAt = null;
+const LIVE_STALE_MS = 5000;
 const TREND_LIMIT = 12;
 let currentLang = localStorage.getItem('uiLang') || 'zh';
 window.APP_LANG = currentLang;
@@ -13,7 +15,20 @@ const UI_TEXT = {
     zh: {
         appTitle: '多模態情緒辨識儀表板',
         pageTitle: '多模態情緒辨識儀表板',
-        wsLabel: '連線：',
+        wsLabel: '後端連線：',
+        dataWaiting: '等待辨識資料',
+        dataWaitingNote: '尚未收到辨識紀錄',
+        dataFresh: '資料持續更新',
+        dataFreshNote: '已收到近期辨識紀錄',
+        dataStale: '資料已停止更新',
+        dataStaleNote: '顯示最後一次結果，非即時判斷。',
+        dataDisconnected: '無法確認資料更新',
+        dataDisconnectedNote: '後端連線尚未恢復；下方保留最後一次結果。',
+        dataUnknown: '資料時間無法確認',
+        dataUnknownNote: '紀錄時間缺失、無效或超前；下方結果不視為即時資料。',
+        lastReading: '最後一次判讀',
+        lastDataTime: '最後資料時間',
+        secondsAgo: '秒前',
         langButton: 'EN',
         navLive: '即時狀態',
         navReplay: '回放',
@@ -79,7 +94,20 @@ const UI_TEXT = {
     en: {
         appTitle: 'Multimodal Emotion Dashboard',
         pageTitle: 'Multimodal Emotion Dashboard',
-        wsLabel: 'Connection: ',
+        wsLabel: 'Backend: ',
+        dataWaiting: 'Waiting for recognition data',
+        dataWaitingNote: 'No recognition records received',
+        dataFresh: 'Data updating',
+        dataFreshNote: 'Recent recognition record received',
+        dataStale: 'Data updates stopped',
+        dataStaleNote: 'Showing the last result, not a live reading.',
+        dataDisconnected: 'Updates cannot be verified',
+        dataDisconnectedNote: 'Backend connection unavailable; showing the last result.',
+        dataUnknown: 'Record time unavailable',
+        dataUnknownNote: 'Missing, invalid or future timestamp; results are not treated as live.',
+        lastReading: 'Last Reading',
+        lastDataTime: 'Last record time',
+        secondsAgo: 'seconds ago',
         langButton: '中文',
         navLive: 'Live',
         navReplay: 'Replay',
@@ -154,11 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initAnalyticsView();
     initReplayView();
 
-    onWsMessage(data => {
-        if (currentView === 'live') {
-            updateLiveView(data);
-        }
-    });
+    onWsMessage(acceptLiveData);
+    setInterval(refreshLiveFreshness, 1000);
+    document.addEventListener('visibilitychange', refreshLiveFreshness);
 });
 
 function tr(key) {
@@ -231,7 +257,8 @@ function applyLanguage() {
     updateTableHeaders();
     updateReplayStaticLabels();
     updateStatusLanguage();
-    if (lastLiveData) updateLiveView(lastLiveData);
+    if (lastLiveData) updateLiveView(lastLiveData, false);
+    else refreshLiveFreshness();
     if (liveTrend.length) updateLiveTrend(liveTrend[liveTrend.length - 1], false);
     if (currentView === 'history') loadHistory();
     if (currentView === 'analytics') loadAnalytics();
@@ -314,16 +341,77 @@ function switchView(view) {
     if (view === 'history') loadHistory();
     if (view === 'analytics') loadAnalytics();
     if (view === 'replay') loadReplaySessions();
+    if (view === 'live') refreshLiveFreshness();
 }
 
 function initLiveView() {
     getRecentLogs(1).then(logs => {
-        if (logs.length > 0) updateLiveView(logs[0]);
+        if (logs.length > 0) acceptLiveData(logs[0]);
     }).catch(() => {});
 }
 
-function updateLiveView(data) {
+function acceptLiveData(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+    if (lastLiveData) {
+        // Database IDs reject duplicate/reordered messages and late initial HTTP responses.
+        if (Number.isInteger(data.id) && Number.isInteger(lastLiveData.id)) {
+            if (data.id <= lastLiveData.id) return;
+        } else {
+            const previousTime = Date.parse(lastLiveData.timestamp);
+            const nextTime = Date.parse(data.timestamp);
+            if (data.timestamp === lastLiveData.timestamp
+                    || (Number.isFinite(previousTime) && Number.isFinite(nextTime) && nextTime <= previousTime)) return;
+        }
+    }
     lastLiveData = data;
+    lastLiveReceivedAt = Date.now();
+    updateLiveView(data);
+}
+
+function liveFreshness(now = Date.now()) {
+    if (!lastLiveData) return { state: 'waiting', age: null };
+    const timestamp = typeof lastLiveData.timestamp === 'string' ? Date.parse(lastLiveData.timestamp) : NaN;
+    const age = Number.isFinite(timestamp) && timestamp <= now + 1000
+        ? Math.max(0, now - timestamp, now - lastLiveReceivedAt) : null;
+    const connected = document.getElementById('ws-status').dataset.state === 'connected';
+    if (!connected) return { state: 'disconnected', age };
+    if (age === null) return { state: 'unknown', age };
+    return { state: age >= LIVE_STALE_MS ? 'stale' : 'fresh', age };
+}
+
+function refreshLiveFreshness() {
+    const { state, age } = liveFreshness();
+    const keys = {
+        waiting: ['dataWaiting', 'dataWaitingNote'],
+        fresh: ['dataFresh', 'dataFreshNote'],
+        stale: ['dataStale', 'dataStaleNote'],
+        disconnected: ['dataDisconnected', 'dataDisconnectedNote'],
+        unknown: ['dataUnknown', 'dataUnknownNote'],
+    };
+    document.getElementById('live-freshness').dataset.state = state;
+    const label = document.getElementById('live-data-label');
+    const note = document.getElementById('live-data-note');
+    // Avoid repeating live-region announcements on every timer tick.
+    if (label.textContent !== tr(keys[state][0])) label.textContent = tr(keys[state][0]);
+    if (note.textContent !== tr(keys[state][1])) note.textContent = tr(keys[state][1]);
+    const lastUpdate = document.getElementById('live-last-update');
+    lastUpdate.textContent = `${tr('lastDataTime')}：${age === null ? '--' : `${Math.floor(age / 1000)} ${tr('secondsAgo')}`}`;
+    lastUpdate.title = lastLiveData && typeof lastLiveData.timestamp === 'string' ? lastLiveData.timestamp : '';
+    const stale = Boolean(lastLiveData) && state !== 'fresh';
+    document.getElementById('view-live').classList.toggle('is-stale', stale);
+    document.querySelector('#view-live .live-summary h2').textContent = tr(stale ? 'lastReading' : 'currentReading');
+    if (lastLiveData) {
+        updateLiveSummary(lastLiveData);
+        if (stale) document.getElementById('summary-line').textContent = tr(keys[state][1]);
+    }
+    const dot = document.querySelector('header .dot');
+    if (dot) {
+        dot.style.background = state === 'fresh' ? (EMOTION_COLORS[lastLiveData.fused_emotion] || 'var(--success)') : 'var(--text-muted)';
+        dot.style.animationPlayState = state === 'fresh' ? 'running' : 'paused';
+    }
+}
+
+function updateLiveView(data, appendTrend = true) {
     updateEmotionDisplay('fused', data.fused_emotion, data.fused_conf, tr('fusedSource'));
     updateEmotionDisplay('video', data.video_emotion || '-', data.video_conf || 0, tr('videoSource'));
     updateEmotionDisplay('audio', data.audio_emotion || '-', data.audio_conf || 0, tr('audioSource'));
@@ -332,14 +420,13 @@ function updateLiveView(data) {
     renderBars('live-bars', scores, data.fused_emotion);
     updateLiveSummary(data);
     updateSignalQuality(data);
-    updateLiveTrend(data);
+    updateLiveTrend(data, appendTrend);
 
     document.getElementById('live-fps').textContent = data.fps ? data.fps.toFixed(1) : '-';
     document.getElementById('live-temp').textContent = data.cpu_temp ? `${data.cpu_temp.toFixed(1)}°C` : '-';
     document.getElementById('live-face').textContent = data.face_detected ? '有' : '無';
 
-    const dot = document.querySelector('header .dot');
-    if (dot) dot.style.background = EMOTION_COLORS[data.fused_emotion] || 'var(--success)';
+    refreshLiveFreshness();
 }
 
 function updateLiveSummary(data) {
