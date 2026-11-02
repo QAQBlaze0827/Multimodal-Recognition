@@ -7,12 +7,17 @@ let liveTrend = [];
 let lastLiveData = null;
 let lastLiveReceivedAt = null;
 const LIVE_STALE_MS = 5000;
+let companionHappyCount = 0;
+let companionActionId = 0;
 const TREND_LIMIT = 12;
 let currentLang = localStorage.getItem('uiLang') || 'zh';
 window.APP_LANG = currentLang;
 
 const UI_TEXT = {
     zh: {
+        companion: '互動陪伴', companionTitle: '柴犬夥伴', companionTouch: '摸摸柴犬',
+        companionIdle: '安靜陪伴中', companionNoFace: '等待有效臉部訊號',
+        companionTilt: '被摸摸了，歪頭回應', companionJump: '收到連續的開心表情，輕跳回應',
         appTitle: '多模態情緒辨識儀表板',
         pageTitle: '多模態情緒辨識儀表板',
         wsLabel: '後端連線：',
@@ -92,6 +97,9 @@ const UI_TEXT = {
         pause: '暫停',
     },
     en: {
+        companion: 'Companion', companionTitle: 'Shiba companion', companionTouch: 'Pet the Shiba',
+        companionIdle: 'Resting nearby', companionNoFace: 'Waiting for a face signal',
+        companionTilt: 'Tilting its head at your touch', companionJump: 'Hopping after a series of happy expressions',
         appTitle: 'Multimodal Emotion Dashboard',
         pageTitle: 'Multimodal Emotion Dashboard',
         wsLabel: 'Backend: ',
@@ -182,7 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initAnalyticsView();
     initReplayView();
 
-    onWsMessage(acceptLiveData);
+    document.getElementById('companion-dog').addEventListener('click', () => playCompanion('tilt'));
+    onWsMessage(data => acceptLiveData(data, true));
     setInterval(refreshLiveFreshness, 1000);
     document.addEventListener('visibilitychange', refreshLiveFreshness);
 });
@@ -211,6 +220,10 @@ function applyLanguage() {
     document.documentElement.lang = currentLang === 'zh' ? 'zh-Hant' : 'en';
     document.title = tr('pageTitle');
     setText('#app-title', 'appTitle');
+    setText('nav a[data-view="companion"]', 'companion');
+    setText('#companion-title', 'companionTitle');
+    setText('#companion-touch', 'companionTouch');
+    document.getElementById('companion-dog').title = tr('companionTouch');
     setText('#ws-label', 'wsLabel');
     setText('#lang-toggle', 'langButton');
     setText('nav a[data-view="live"]', 'navLive');
@@ -332,6 +345,7 @@ function initNav() {
 }
 
 function switchView(view) {
+    resetCompanion();
     currentView = view;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`view-${view}`).classList.add('active');
@@ -341,7 +355,7 @@ function switchView(view) {
     if (view === 'history') loadHistory();
     if (view === 'analytics') loadAnalytics();
     if (view === 'replay') loadReplaySessions();
-    if (view === 'live') refreshLiveFreshness();
+    if (view === 'live' || view === 'companion') refreshLiveFreshness();
 }
 
 function initLiveView() {
@@ -350,7 +364,7 @@ function initLiveView() {
     }).catch(() => {});
 }
 
-function acceptLiveData(data) {
+function acceptLiveData(data, fromStream = false) {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return;
     if (lastLiveData) {
         // Database IDs reject duplicate/reordered messages and late initial HTTP responses.
@@ -363,9 +377,53 @@ function acceptLiveData(data) {
                     || (Number.isFinite(previousTime) && Number.isFinite(nextTime) && nextTime <= previousTime)) return;
         }
     }
+    if (liveFreshness().state !== 'fresh' || lastLiveData?.session_id !== data.session_id ||
+        Date.parse(data.timestamp) - Date.parse(lastLiveData?.timestamp) >= LIVE_STALE_MS) companionHappyCount = 0;
     lastLiveData = data;
     lastLiveReceivedAt = Date.now();
     updateLiveView(data);
+    if (fromStream && currentView === 'companion' && !document.hidden && liveFreshness().state === 'fresh') {
+        if (data.face_detected && data.video_conf > 0 && data.video_emotion === 'happy') {
+            if (++companionHappyCount === 3) playCompanion('jump');
+        } else {
+            companionHappyCount = 0;
+        }
+    }
+}
+
+function resetCompanion() {
+    companionHappyCount = 0;
+    companionActionId++;
+    document.getElementById('companion-dog').dataset.pose = 'idle';
+}
+
+function playCompanion(pose) {
+    const dog = document.getElementById('companion-dog');
+    const id = ++companionActionId;
+    dog.dataset.pose = pose;
+    renderCompanion(liveFreshness().state);
+    setTimeout(() => {
+        if (id !== companionActionId) return;
+        dog.dataset.pose = 'idle';
+        renderCompanion(liveFreshness().state);
+    }, 800);
+}
+
+function renderCompanion(state) {
+    if (currentView !== 'companion') return;
+    const dog = document.getElementById('companion-dog');
+    const validFace = state === 'fresh' && lastLiveData.face_detected && lastLiveData.video_conf > 0;
+    if (!validFace || document.hidden) {
+        companionHappyCount = 0;
+        if (dog.dataset.pose === 'jump') resetCompanion();
+    }
+    const statusKey = dog.dataset.pose === 'tilt' ? 'companionTilt'
+        : dog.dataset.pose === 'jump' ? 'companionJump'
+        : validFace ? 'companionIdle'
+        : ({ waiting: 'dataWaiting', disconnected: 'dataDisconnected', unknown: 'dataUnknown',
+             stale: 'dataStale', fresh: 'companionNoFace' })[state];
+    const status = document.getElementById('companion-status');
+    if (status.textContent !== tr(statusKey)) status.textContent = tr(statusKey);
 }
 
 function liveFreshness(now = Date.now()) {
@@ -381,6 +439,7 @@ function liveFreshness(now = Date.now()) {
 
 function refreshLiveFreshness() {
     const { state, age } = liveFreshness();
+    renderCompanion(state);
     const keys = {
         waiting: ['dataWaiting', 'dataWaitingNote'],
         fresh: ['dataFresh', 'dataFreshNote'],

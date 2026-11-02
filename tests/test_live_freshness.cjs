@@ -42,11 +42,11 @@ function dashboard() {
         vm.runInContext(fs.readFileSync(path.join(__dirname, '../frontend/js', file), 'utf8'), context);
     }
     const run = code => vm.runInContext(code, context);
-    const send = (id = 1, age = 0, extra = {}) => {
+    const send = (id = 1, age = 0, extra = {}, fromStream = true) => {
         context.record = { id, timestamp: new Date(now - age).toISOString(),
             fused_emotion: 'happy', fused_conf: 0.8, video_emotion: 'happy', video_conf: 0.8,
             video_scores: { happy: 0.8, neutral: 0.2 }, face_detected: true, ...extra };
-        run('acceptLiveData(record)');
+        run(`acceptLiveData(record, ${fromStream})`);
     };
     return { run, send, element, context, events, intervals,
         advance(ms) { now += ms; run('refreshLiveFreshness()'); },
@@ -54,6 +54,50 @@ function dashboard() {
         count: () => run('liveTrend.length'),
     };
 }
+
+function companion() {
+    const d = dashboard();
+    d.run("switchView('companion')");
+    return d;
+}
+
+test('three new face readings trigger one hop per happy streak, not initial HTTP or redraws', () => {
+    const d = companion();
+    const dog = d.element('#companion-dog');
+    d.send(1, 0, {}, false); d.send(2); d.send(2); d.send(3);
+    d.run('applyLanguage()');
+    assert.equal(dog.dataset.pose, 'idle');
+    d.send(4); assert.equal(dog.dataset.pose, 'jump');
+    const action = d.run('companionActionId');
+    d.send(5); d.send(6); assert.equal(d.run('companionActionId'), action);
+    d.send(7, 0, {video_emotion: 'neutral'});
+    d.send(8); d.send(9); d.send(10);
+    assert.equal(d.run('companionActionId'), action + 1);
+});
+
+test('lost face, invalid score, stale data, and a session change break the streak', () => {
+    for (const interrupt of [
+        d => d.send(3, 0, {face_detected: false}),
+        d => d.send(3, 0, {video_conf: 0}),
+        d => d.advance(6000),
+        d => d.send(3, 0, {session_id: 'other'}),
+        d => { d.run("switchView('live')"); d.send(3); d.run("switchView('companion')"); },
+    ]) {
+        const d = companion();
+        d.send(1); d.send(2); interrupt(d); d.send(4); d.send(5);
+        assert.equal(d.element('#companion-dog').dataset.pose, 'idle');
+        d.send(6); assert.equal(d.element('#companion-dog').dataset.pose, 'jump');
+    }
+});
+
+test('manual touch works without data; stale records cannot trigger a hop', () => {
+    const d = companion();
+    d.send(1, 10000); d.send(2, 10000); d.send(3, 10000);
+    assert.equal(d.element('#companion-dog').dataset.pose, 'idle');
+    d.element('#ws-status').dataset.state = 'disconnected';
+    d.run("playCompanion('tilt')");
+    assert.equal(d.element('#companion-status').textContent, '被摸摸了，歪頭回應');
+});
 
 test('backend connection without records stays waiting', () => {
     const d = dashboard();
