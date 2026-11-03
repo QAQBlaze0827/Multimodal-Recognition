@@ -11,6 +11,7 @@ function connectWebSocket() {
         document.getElementById('ws-status').dataset.state = 'connected';
         document.getElementById('ws-status').textContent = typeof tr === 'function' ? tr('connected') : 'connected';
         document.getElementById('ws-status').style.color = 'var(--success)';
+        if (typeof refreshLiveFreshness === 'function') refreshLiveFreshness();
     };
 
     ws.onmessage = (event) => {
@@ -26,6 +27,7 @@ function connectWebSocket() {
         document.getElementById('ws-status').dataset.state = 'disconnected';
         document.getElementById('ws-status').textContent = typeof tr === 'function' ? tr('disconnected') : 'disconnected';
         document.getElementById('ws-status').style.color = 'var(--danger)';
+        if (typeof refreshLiveFreshness === 'function') refreshLiveFreshness();
         setTimeout(connectWebSocket, 3000);
     };
 

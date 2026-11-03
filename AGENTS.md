@@ -204,3 +204,9 @@ python app.py --vision-only
 - ⚠️ sounddevice 需要 `libportaudio2` 系統套件：`sudo apt-get install -y libportaudio2`
 - ⚠️ TensorFlow 以 CPU 模式執行（WSL 內無 CUDA 驅動）
 - ⚠️ protobuf/ml-dtypes 版本衝突（mediapipe vs tf2onnx/tensorflow），訓練仍可正常運作
+
+## 樹莓派儀表板與柴犬整合測試（2026-11-03）
+- 從 `feature/rpi-camera-support`（`c6025f0`）建立筆電本機測試分支 `codex/rpi-dashboard-companion`。本次只帶入 `main`（`4d9e0cc`）的四個前端檔：`frontend/index.html`、`frontend/css/style.css`、`frontend/js/app.js`、`frontend/js/websocket.js`，以及 `tests/test_live_freshness.cjs`，不是整支 main 合併。
+- 即時頁分開顯示後端連線與辨識資料是否仍在更新；有效資料停止更新達 5 秒後淡化最後判讀。「互動陪伴」頁可點擊柴犬歪頭；連續三筆新的有效開心臉部結果觸發一次輕跳，不採用語音或綜合分數。沒有接入語音轉文字。
+- 筆電執行 `node --test tests/test_live_freshness.cjs`：17 項通過。比對前端與來源版本一致，並核對測試檔 Git blob；Pi Camera、INMP441 的 48 kHz 雙聲道選左、推論與融合設定、模型、後端和 RPi 相依未更動。未啟動辨識、未操作資料庫，沒有實機驗證、提交、推送或合回任何分支。
+- 下一步：提交並推送測試分支後，在 Pi 確認工作目錄乾淨才切換，使用原有啟動方式，從筆電瀏覽器驗收相機、麥克風、即時更新和互動；通過後再決定是否合回 Pi 分支。正式程式仍沿用原本資料保留規則。
