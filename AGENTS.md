@@ -210,3 +210,9 @@ python app.py --vision-only
 - 即時頁分開顯示後端連線與辨識資料是否仍在更新；有效資料停止更新達 5 秒後淡化最後判讀。「互動陪伴」頁可點擊柴犬歪頭；連續三筆新的有效開心臉部結果觸發一次輕跳，不採用語音或綜合分數。沒有接入語音轉文字。
 - 筆電執行 `node --test tests/test_live_freshness.cjs`：17 項通過。比對前端與來源版本一致，並核對測試檔 Git blob；Pi Camera、INMP441 的 48 kHz 雙聲道選左、推論與融合設定、模型、後端和 RPi 相依未更動。未啟動辨識、未操作資料庫，沒有實機驗證、提交、推送或合回任何分支。
 - 下一步：提交並推送測試分支後，在 Pi 確認工作目錄乾淨才切換，使用原有啟動方式，從筆電瀏覽器驗收相機、麥克風、即時更新和互動；通過後再決定是否合回 Pi 分支。正式程式仍沿用原本資料保留規則。
+
+## 樹莓派 FERPlus 可選模型：筆電整合（2026-11-03）
+- 使用者已回報 Pi 儀表板與互動可運作，並確認 Pi 的 `feature/rpi-camera-support` 已在 `ff1712a`。本次從此提交開本機 `codex/rpi-ferplus-test`；從 main 的 `4d9e0cc` 移植 `src/video/ferplus.py` 與 `src/main.py` 的模型切換，不合併整個 main。沒有更動 Pi Camera、INMP441、舊模型分數、融合、設定、資料庫或柴犬動作。
+- PC 與 Pi 的執行需求補列 Pillow；只有選 FERPlus 才匯入該模組。原指令仍用 legacy；Pi 測試影像時使用 `python app.py --vision-only --no-display --video-model ferplus`，需要語音融合時移除 `--vision-only`。選 FERPlus 時缺檔、SHA-256 不符或 ONNX 契約錯誤會在開相機之前停止，不自動改用其他模型。
+- 部署前在 Pi 的專案 .venv 確認 Pillow 可用，並將已驗證的模型放在專案根目錄下的 `.cache/ferplus/emotion-ferplus-8.onnx`；這個目錄被 Git 忽略，pull 不會取得模型。在專案根目錄用 `sha256sum .cache/ferplus/emotion-ferplus-8.onnx` 核對預期值 `a2a2ba6a335a3b29c21acb6272f962bd3d47f84952aaffa03b60986e04efa61c`。模型八類輸出取 neutral/happy/sad/anger 後正規化；結果是四類相對分數，不是準確率。
+- 筆電：`python -B -m unittest discover -s tests -v` 通過新增的 3 項測試（預設模型、缺檔不開相機也不降級、四類索引）；`node --test tests/test_live_freshness.cjs` 通過 17 項。用已存在的模型、CPUExecutionProvider 與合成影像做實際推論，四類分數總和約 1。未開啟相機、麥克風或正式日誌；未安裝或下載、未測 Pi 的 FPS／準確率，未提交、推送或合回。

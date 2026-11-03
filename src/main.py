@@ -33,6 +33,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--vision-only", action="store_true")
     parser.add_argument("--audio-only", action="store_true")
+    parser.add_argument("--video-model", choices=("legacy", "ferplus"), default="legacy",
+                        help="legacy: configured video model (default); ferplus: pinned local candidate.")
     parser.add_argument("--no-display", action="store_true")
     parser.add_argument("--camera-index", type=int, default=None)
     parser.add_argument("--max-frames", type=int, default=0, help="Stop after N frames; useful for smoke tests.")
@@ -40,7 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.audio_only and args.video_model != "legacy":
+        parser.error("--video-model ferplus cannot be used with --audio-only")
     config = load_config(args.config)
 
     if args.audio_only:
@@ -56,6 +61,17 @@ def run_video_loop(config: dict, args) -> None:
     video_cfg = config["video"]
     output_cfg = config["output"]
 
+    # Validate the optional model before acquiring camera/audio resources.
+    if args.video_model == "ferplus":
+        from src.video.ferplus import FerPlusEmotionModel
+
+        video_model = FerPlusEmotionModel()
+        print("[video] FERPlus candidate: four-class relative scores; not calibrated accuracy.")
+    else:
+        model_cfg = video_cfg["model"]
+        video_model = VideoEmotionModel(cv2, model_cfg["path"], int(model_cfg["input_size"]))
+    print(f"[video] model={args.video_model}, backend={video_model.backend}, path={video_model.model_path}")
+
     camera_id = video_cfg["camera_id"] if args.camera_index is None else args.camera_index
     cap = open_camera(
         cv2,
@@ -70,8 +86,6 @@ def run_video_loop(config: dict, args) -> None:
     if detector.warning:
         print(f"[video] {detector.warning}")
 
-    model_cfg = video_cfg["model"]
-    video_model = VideoEmotionModel(cv2, model_cfg["path"], int(model_cfg["input_size"]))
     video_pipeline = VideoEmotionPipeline(cv2, detector, video_model, int(video_cfg["frame_skip"]))
 
     audio_thread = None
