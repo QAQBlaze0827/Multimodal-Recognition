@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from backend.companion import CompanionBridge, LOCAL_HOSTS, router as companion_router
 from backend.database import (
     cleanup_old_sessions,
     create_session,
@@ -74,6 +75,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Multimodal Emotion Recognition API", version="1.0.0", lifespan=lifespan)
+app.state.companion_enabled = False
+app.state.companion_bridge = CompanionBridge()
+app.include_router(companion_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -187,13 +191,18 @@ async def _poll_database_logs(interval_seconds: float = 0.25) -> None:
         await asyncio.sleep(interval_seconds)
 
 
-def serve(host: str = "0.0.0.0", port: int = 8000, db_path: str = "data/emotion.db") -> None:
+def serve(host: str = "0.0.0.0", port: int = 8000, db_path: str = "data/emotion.db",
+          companion_local: bool = False) -> None:
     global DB_PATH
+    if companion_local and host not in LOCAL_HOSTS:
+        raise ValueError("--companion-local requires --host 127.0.0.1, localhost or ::1")
     DB_PATH = db_path
+    app.state.companion_enabled = companion_local
+    app.state.companion_bridge = CompanionBridge()
     frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
     if frontend_dir.is_dir():
         app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", proxy_headers=not companion_local)
 
 
 def main() -> None:
@@ -201,8 +210,12 @@ def main() -> None:
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--db", default="data/emotion.db")
+    parser.add_argument("--companion-local", action="store_true",
+                        help="Enable the laptop-only text bridge (requires a loopback host)")
     args = parser.parse_args()
-    serve(args.host, args.port, args.db)
+    if args.companion_local and args.host not in LOCAL_HOSTS:
+        parser.error("--companion-local requires --host 127.0.0.1, localhost or ::1")
+    serve(args.host, args.port, args.db, args.companion_local)
 
 
 if __name__ == "__main__":

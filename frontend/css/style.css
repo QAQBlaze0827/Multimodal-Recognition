@@ -150,7 +150,21 @@ nav { flex-wrap: wrap; }
 [data-pose="tilt"] .dog-head { transform: rotate(-13deg); }
 [data-pose="jump"] .dog-body { animation: dog-hop .65s ease-in-out; }
 @keyframes dog-hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-18px); } }
-#companion-status { color: var(--text-secondary); margin: 1rem 0; }
+.companion-face-status { color: var(--text-secondary); margin: 1rem 0; }
+.companion-voice-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; padding: .75rem 0; margin-bottom: .5rem; border-bottom: 1px solid var(--border); font-size: .85rem; color: var(--text-secondary); }
+#companion-voice-status { display: inline-flex; align-items: center; gap: .5rem; }
+#companion-voice-status::before { content: ''; width: .5rem; height: .5rem; flex: 0 0 .5rem; border-radius: 50%; background: var(--text-muted); }
+#companion-voice-status[data-state="listening"]::before { background: var(--success); }
+#companion-voice-status[data-state="stale"]::before,
+#companion-voice-status[data-state="disconnected"]::before { background: var(--warning); }
+.companion-bubble { position: relative; width: min(100%, 34rem); min-height: 7rem; margin: .75rem 0 1rem; padding: 1rem 1.25rem; border: 1px solid #568f84; border-radius: 8px; background: #172c2a; text-align: left; }
+.companion-bubble::after { content: ''; position: absolute; bottom: -7px; left: calc(50% - 6px); width: 12px; height: 12px; background: #172c2a; border-right: 1px solid #568f84; border-bottom: 1px solid #568f84; transform: rotate(45deg); }
+#companion-reply-label, #companion-user-label { display: block; color: var(--text-secondary); font-size: .8rem; margin-bottom: .5rem; }
+#companion-reply { font-size: 1.15rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.companion-utterance { text-align: left; padding: 1rem 0; border-bottom: 1px solid var(--border); min-height: 6rem; }
+#companion-transcript { line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+#companion-reply-time { display: block; margin-top: .6rem; color: var(--text-secondary); font-size: .8rem; }
+#companion-reply-time[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
     .dog-head { transition: none; }
     [data-pose="jump"] .dog-body { animation: none; }

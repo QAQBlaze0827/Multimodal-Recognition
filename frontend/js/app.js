@@ -224,6 +224,7 @@ function applyLanguage() {
     setText('#companion-title', 'companionTitle');
     setText('#companion-touch', 'companionTouch');
     document.getElementById('companion-dog').title = tr('companionTouch');
+    if (typeof renderCompanionDialogue === 'function') renderCompanionDialogue();
     setText('#ws-label', 'wsLabel');
     setText('#lang-toggle', 'langButton');
     setText('nav a[data-view="live"]', 'navLive');

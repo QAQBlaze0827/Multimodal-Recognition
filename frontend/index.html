@@ -30,7 +30,15 @@
 
 <section id="view-companion" class="view">
     <h2 id="companion-title">柴犬夥伴</h2>
+    <div class="companion-voice-bar">
+        <span id="companion-voice-label">語音互動</span>
+        <span id="companion-voice-status" data-state="connecting" role="status">連線中...</span>
+    </div>
     <div class="companion-stage">
+        <div class="companion-bubble" aria-live="polite" aria-atomic="true">
+            <span id="companion-reply-label">柴犬回覆</span>
+            <p id="companion-reply">等待對話</p>
+        </div>
         <button type="button" id="companion-dog" data-pose="idle" title="摸摸柴犬">
             <svg viewBox="0 0 240 240" aria-hidden="true" fill="none" stroke="#493733" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
                 <ellipse cx="120" cy="219" rx="71" ry="6" fill="#26524e" opacity=".22" stroke="none"/>
@@ -57,7 +65,12 @@
             <span id="companion-touch">摸摸柴犬</span>
         </button>
     </div>
-    <p id="companion-status" role="status">等待辨識資料</p>
+    <div class="companion-utterance">
+        <span id="companion-user-label">你的話（轉錄）</span>
+        <p id="companion-transcript">尚未收到文字</p>
+        <time id="companion-reply-time" hidden></time>
+    </div>
+    <p class="companion-face-status"><span id="companion-face-label">表情互動：</span><span id="companion-status" role="status">等待辨識資料</span></p>
 </section>
 
 <!-- ==================== LIVE VIEW ==================== -->
@@ -238,5 +251,6 @@
 <script src="js/websocket.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>
+<script src="js/companion.js"></script>
 </body>
 </html>
