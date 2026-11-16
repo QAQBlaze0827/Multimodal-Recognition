@@ -3,6 +3,22 @@
 多模態情緒辨識原型：即時影像 + 音訊情緒 + confidence-based late fusion。  
 目前主線架構依照 `ARCHITECTURE.md`，程式入口是 `app.py`，實作放在 `src/`。
 
+## 日常啟動：Pi 收音、筆電轉文字
+
+兩台先連上 Tailscale，並各自進入專題根目錄。首次設定完成後，每次只需：
+
+筆電 PowerShell（先開，等到 `Listening`）：
+```powershell
+& .\tools\voice_companion\start_receiver.ps1
+```
+Pi 的 Bash／SSH（再開；最前面的點與空格要保留）：
+```bash
+. ./tools/voice_companion/start_sender.sh
+```
+不需手動 activate：腳本各自使用正確的 Python。這是手動啟動、audio-only、終端機固定回覆模式，**不會自動開機收音，也尚未接回 Pi 網頁**。結束先在 Pi 按 Ctrl+C，再停筆電接收器。
+
+第一次可沿用目前視窗裡的 IP／金鑰，**不用重新產生金鑰**，只補問缺少的值。詳見 [首次保存與設定位置](tools/voice_companion/REMOTE_AUDIO.md#quick-start)。已有保存設定後直接讀取，不會被舊的終端機變數蓋掉；設定錯誤會停止，不會偷偷重設或刪除。
+
 要測試「說話後，網頁狗狗顯示文字回覆」，請先看下方的[筆電語音互動網頁啟動流程](#laptop-voice-start)。它與一般的影像／語音情緒辨識是不同啟動流程。
 
 要測試「樹莓派麥克風 → 筆電轉錄與固定回覆」，請看 [Pi 傳音到筆電：逐步啟動與驗收](tools/voice_companion/REMOTE_AUDIO.md)。這是另一個選用模式，目前只在筆電終端機顯示，尚未把回覆送回 Pi 網頁；不需開第二份麥克風程式。

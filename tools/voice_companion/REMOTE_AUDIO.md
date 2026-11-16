@@ -13,6 +13,57 @@ Pi 的 INMP441 麥克風（既有單一 InputStream）
 
 Whisper 不在 Pi 上跑；筆電接收程式不開筆電麥克風。沒有 LLM、語音朗讀、新回覆規則或模型重訓。原來的筆電收音網頁模式仍可使用，但本次測試請停止 `transcribe_mic.py`，避免混淆來源。
 
+<a id="quick-start"></a>
+
+## 簡化啟動：先看這一節
+
+兩台都要取得新增啟動腳本的版本。由使用者提交、推送及更新 Pi，腳本不會操作 Git、安裝套件或下載模型。以下從各自的專題根目錄執行；沒有要開網頁後端。
+
+### 第一次：沿用剛才的設定並保存
+
+先在正在跑的 Pi 程式按 Ctrl+C，再停止筆電接收器，**不要關掉原終端機視窗**。只停止程式通常不會清掉先前設定的變數。
+
+筆電原本的 PowerShell：
+```powershell
+& .\tools\voice_companion\start_receiver.ps1 -SetupOnly
+```
+會沿用該視窗的 `$laptopIp`、`$piIp` 和 `$env:COMPANION_AUDIO_TOKEN`。缺 IP 才問 IP、缺金鑰才用隱藏輸入詢問；不產生新金鑰，也不印出現有金鑰。看到 `Setup checked. Nothing was started.`，表示只保存／檢查，尚未開接收器。
+
+Pi 原本的 Bash／SSH：
+```bash
+. ./tools/voice_companion/start_sender.sh --setup-only
+```
+最前面是「一個點 + 一個空格」，讓腳本可以沿用當前 shell 的普通變數 `laptop_ip`，並繼承已 export 的 `COMPANION_AUDIO_TOKEN`。在子 shell 中執行，不會用 exec 關掉你的 SSH shell，也不改變原 shell 工作目錄。不要改成 `bash ...` 來做第一次匯入，否則一般變數可能無法繼承而再問一次 IP。
+
+若原終端機已關閉，腳本無法取回已消失的變數，只補問缺少的值。兩邊必須使用同一把有效金鑰；不要把 Windows 的加密設定檔直接搬到 Pi。金鑰不要貼到聊天、Git 或截圖。
+
+### 之後：兩個啟動指令
+
+筆電先執行：
+```powershell
+& .\tools\voice_companion\start_receiver.ps1
+```
+等到 `Listening`，再在 Pi 執行：
+```bash
+. ./tools/voice_companion/start_sender.sh
+```
+只要保存設定仍有效，就不再問 IP 或金鑰。筆電固定使用 `%LOCALAPPDATA%\emotion-stt-test\.venv\Scripts\python.exe`；Pi 固定使用這份專案的 `.venv/bin/python`，不依賴目前有沒有 activate。Pi 仍只執行 `--audio-only --stt-url ...`，不開相機或正式資料庫；既有手動指令保持可用。
+
+啟動腳本不改傳輸金鑰／來源驗證、不放寬防火牆、不新增常駐服務或自動重啟。若 PowerShell 阻擋 `.ps1`，先保留錯誤訊息確認執行原則，不要直接全面停用系統安全設定。連線失敗仍查看接收器／傳送器原本的錯誤提示，不會默默改 IP 或產生新密碼。
+
+### 設定保存在哪裡
+
+| 裝置 | 位置與保護 |
+|---|---|
+| 筆電 | `%LOCALAPPDATA%\emotion-stt-test\connection\receiver.json`：金鑰用目前 Windows 使用者的 DPAPI 加密；專用資料夾及檔案限目前使用者存取 |
+| Pi | `~/.config/multimodal-voice/sender.json`：資料夾 700、檔案 600、檢查檔案擁有者；金鑰是明文，**不是磁碟加密** |
+
+這兩個預設位置都在專案外；Windows 不放在本專案的 OneDrive 資料夾。請勿自行把它們加入同步或 Git。Windows DPAPI 說明見 [Microsoft 文件](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/convertfrom-securestring?view=powershell-5.1)。這些保護不等於能防住同帳號惡意程式、管理員／root 或被竊取的未加密 Pi SD 卡。
+
+保存後以設定檔為準，**不因環境變數不同而自動覆寫**。損毀、無法解密、權限太寬、符號連結或資料格式錯誤會停止，保留原檔，不自動修復或刪除。本小步驟沒有做設定編輯器；若 IP 或金鑰變動，先用下方原本的手動流程測通，再明確處理已保存設定的更新，避免一邊換了、另一邊還在用舊值。預設連接埠為 8765，非此 port 的使用者先沿用手動啟動。
+
+以下第 1～7 節保留**手動啟動與排查流程**，一般日常使用不必每次重做。
+
 ## 1. 先確認兩邊的程式與環境
 
 兩台都需要取得包含本功能的版本；目前開發分支是 `codex/rpi-voice-companion`。先由使用者檢查、提交、推送，再在 Pi 工作目錄乾淨的前提下更新對應分支。**不要把本文件當成已經替你推送或更新 Pi 的證明，也不用現在合併 main。**
