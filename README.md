@@ -19,7 +19,7 @@
                               本機後端 → 網頁狗狗對話框
 ```
 
-- 本節適用於已備妥環境的開發筆電；不是新電腦 clone 後的完整安裝流程。
+- 語音工具已納入 `tools/voice_companion/`。已有環境可直接使用；新電腦先完成下方「首次準備」再啟動。
 - 瀏覽器不負責收音，不需要開啟網頁的麥克風權限。
 - 不用先開 `python app.py`，也不用開樹莓派，即可測試文字回覆。
 - 沒有接 LLM、語音朗讀或多輪對話記憶；未支援的說法仍會回詢問。
@@ -30,14 +30,61 @@
 | 視窗 | 執行內容 | 使用的 Python | 工作目錄 |
 |---|---|---|---|
 | PowerShell A | 網頁後端 | 專題內 `.venv\Scripts\python.exe` | 專題根目錄 |
-| PowerShell B | 收音、轉錄、固定回覆及傳送文字 | `$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe` | 任意目錄 |
+| PowerShell B | 收音、轉錄、固定回覆及傳送文字 | `$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe` | 專題根目錄 |
 | 瀏覽器 | 顯示狗狗與文字 | 不需 Python | 開啟本機網址 |
 
 以下都明確指定 Python 路徑，**不需要另外 Activate，也不用依賴終端機前面是否顯示 `(.venv)`**。兩個 PowerShell 必須同時保持執行，不要在同一個正在運作的視窗內貼入第二個程式的指令。
 
-外部工具位於這台筆電的 `C:\Users\QAQBl\AppData\Local\emotion-stt-test\`，需要既有的 `.venv`、`models` 模型快取，以及 `transcribe_mic.py`、`dog_reply.py`、`web_reply.py`。
+**程式在專案內，語音環境與模型仍在專案外。** 這台筆電可沿用 `C:\Users\QAQBl\AppData\Local\emotion-stt-test\` 下的 `.venv` 與 `models`，不用重建或重新下載。原本外部的 `.py` 檔保留，但本節改執行專案內版本；不要同時開新舊兩份收音。
 
-**注意：外部工具不在本 repo 的 Git 管理範圍。** 只 clone 或 pull 專題不會取得這些檔案、虛擬環境或 Whisper 模型；換電腦時需另外準備，不能直接照本節就視為已安裝完成。專題內的 `requirements_backend.txt` 也不是外部轉錄環境的安裝清單。
+| 專案內檔案 | 用途 |
+|---|---|
+| `tools/voice_companion/transcribe_mic.py` | 筆電麥克風切句、離線 Whisper 轉錄、呼叫回覆與選用文字傳送 |
+| `tools/voice_companion/dog_reply.py` | 既有固定規則，不是情緒模型、LLM 或多輪對話 |
+| `tools/voice_companion/web_reply.py` | 本機限定的文字傳送，保留佇列上限、逾時與停止通知 |
+| `tools/voice_companion/test_*.py` | 合成與模擬測試，不會開啟真實麥克風 |
+| `tools/voice_companion/requirements.txt` | 獨立的筆電語音依賴，不要裝進情緒辨識 `.venv` 或樹莓派 |
+
+提交並推送這些腳本後，組員可透過同一分支取得；虛擬環境、Whisper 模型與私人錄音不隨 Git 提供。本步仍沒有樹莓派音訊傳輸，也未放寬本機 API 限制。
+
+### 首次準備：僅供尚未安裝的 Windows 筆電
+
+已有外部語音環境與 base 模型的使用者跳過本段，不要為了換腳本位置重新安裝。以下指令都在專題根目錄執行；需要 Python 3.11，可先用 `py -0p` 確認。
+
+1. 新電腦建立語音環境。若目錄已存在，指令會停止，請先確認原環境，不覆蓋或刪除它：
+
+```powershell
+$sttRoot = Join-Path $env:LOCALAPPDATA 'emotion-stt-test'
+if (Test-Path -LiteralPath "$sttRoot\.venv") { throw 'STT environment already exists; inspect it before continuing.' }
+py -3.11 -m venv "$sttRoot\.venv"
+```
+
+2. 安裝到獨立語音環境。這份清單採用已運作原型的版本，未鎖定所有間接依賴，也未驗證每台新電腦的安裝結果：
+
+```powershell
+$sttPython = "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe"
+& $sttPython -m pip install -r .\tools\voice_companion\requirements.txt
+& $sttPython -c "import sys, faster_whisper, sounddevice, soundfile; print(sys.executable); print('Import OK')"
+```
+
+3. 只有缺少模型時才執行這個下載步驟，需要連網下載多語言 `base`，不會開麥克風或上傳錄音。後續日常啟動只離線載入，不自動下載：
+
+```powershell
+$sttPython = "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe"
+& $sttPython -c "import os; os.environ.pop('HF_HUB_OFFLINE', None); from faster_whisper import WhisperModel; p=os.path.join(os.environ['LOCALAPPDATA'], 'emotion-stt-test', 'models'); print('Preparing multilingual base model...', flush=True); model=WhisperModel('base', device='cpu', compute_type='int8', download_root=p); print('Model loaded OK')"
+```
+
+這個 `models` 是 Hugging Face 模型快取根目錄，不是專題的 ONNX `models/`。若要使用另一個既有快取，啟動轉錄時加 `--model-dir "D:\your-stt-cache"`，指向當初下載時的 `download_root`；它不是切換模型名稱的選項。Windows 預設找 `%LOCALAPPDATA%\emotion-stt-test\models`；沒有 `LOCALAPPDATA` 的環境則找 `~/.cache/emotion-stt-test/models`，此回合未驗證 Linux 音訊裝置。
+
+4. 新電腦若還沒有專題後端環境，在專題根目錄另外建立 `.venv` 並安裝後端依賴。已存在的環境不要重建：
+
+```powershell
+if (Test-Path -LiteralPath .\.venv) { throw 'Project environment already exists; do not recreate it.' }
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements_backend.txt
+```
+
+純語音網頁測試不需要先安裝情緒模型的訓練套件。上述兩個環境仍分開使用。
 
 ### 1. 停止先前開啟的程式
 
@@ -91,10 +138,10 @@ Uvicorn running on http://127.0.0.1:8000
 
 ### 4. PowerShell B：啟動收音與轉錄
 
-另開一個 PowerShell，在任意目錄執行：
+另開一個 PowerShell，先進入同一個專題根目錄，再執行專案內腳本：
 
 ```powershell
-& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" "$env:LOCALAPPDATA\emotion-stt-test\transcribe_mic.py" --web-url http://127.0.0.1:8000
+& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" -B .\tools\voice_companion\transcribe_mic.py --web-url http://127.0.0.1:8000
 ```
 
 `&` 是 PowerShell 執行引號內程式路徑的語法，請一起貼上。`--web-url` 決定文字要送到哪裡；沒有它時只會顯示在終端機，不會傳到網頁。
@@ -106,7 +153,7 @@ Listening. Speak a short sentence, then pause about 0.8 seconds.
 [web] Connected to local dashboard.
 ```
 
-兩行的出現順序可能不同。確認 `Input:` 是預期的耳機／筆電麥克風；這裡讀的是筆電裝置，不是樹莓派的 INMP441。模型由本機快取載入，不會在啟動時自動下載缺少的模型。
+兩行的出現順序可能不同。確認 `Input:` 是預期的耳機／筆電麥克風，`Model cache:` 指向既有模型快取；這裡讀的是筆電裝置，不是樹莓派的 INMP441。模型由本機快取載入，不會在啟動時自動下載缺少的模型。
 
 連線成功後，PowerShell A 會定期顯示：
 
@@ -144,14 +191,14 @@ POST /api/companion/events HTTP/1.1" 200 OK
 來源持續連線但沒有新回覆時，最近一則對話約 60 秒後會清空。下次使用重新執行步驟 3、4，再開網頁即可；不要假設先前的預覽後端在重開機後還會運作。
 
 ## 賴彥光懶人包
-11/14 筆電端
+11/16 筆電端：改用專案內腳本，沿用外部環境與模型；兩個視窗都在專題根目錄。
 1. PowerShell A：在專題根目錄開後端
 ``` text 
   .\.venv\Scripts\python.exe -B backend/app.py --host 127.0.0.1 --port 8000 --db :memory: --companion-local
 ```
 2. PowerShell B：另開視窗，啟動轉錄
 ``` powershell
-& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" "$env:LOCALAPPDATA\emotion-stt-test\transcribe_mic.py" --web-url http://127.0.0.1:8000
+& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" -B .\tools\voice_companion\transcribe_mic.py --web-url http://127.0.0.1:8000
 ```
 3. 開網頁
 ``` text
@@ -170,14 +217,15 @@ POST /api/companion/events HTTP/1.1" 200 OK
 | `WinError 10048`／address already in use | 該 port 已被使用。只停止你確認是自己開的舊後端；不確定時可改用另一個空閒 port，例如 8001，並同步修改後端 `--port`、轉錄 `--web-url` 與瀏覽器網址。 |
 | `409 Conflict` | 已有另一份有效的轉錄來源。停止多餘的轉錄程式；若它是異常退出，等約 8 秒後再確認連線。 |
 | 網頁顯示「轉錄程式連線逾時」 | 檢查 PowerShell B 是否停止或有錯誤。後端連線正常，不代表轉錄程式仍正常。 |
-| 找不到外部 Python／`transcribe_mic.py`／模型快取 | 外部工具不隨 repo clone，確認這台電腦的 `emotion-stt-test` 已備妥；不要把套件誤裝到專題 `.venv`。 |
+| 找不到外部 Python／模型快取 | 環境與模型不隨 repo clone；新電腦請先完成本節「首次準備」。原筆電先確認既有 `emotion-stt-test`，不要把套件誤裝到專題 `.venv`。 |
+| 找不到 `tools/voice_companion/transcribe_mic.py` | 確認目前位於專題根目錄，且分支已包含語音工具；不要切回較舊分支後繼續使用新指令。 |
 | 麥克風不是預期裝置 | 先停舊收音程式，用下方指令列出裝置，再於原啟動指令加 `--device N`；N 要用當次列出的輸入裝置編號。 |
 | 只有「表情互動：等待辨識資料」 | 這是純語音測試下的預期狀態，先看「語音互動」那一列，不要因此再開一份收音程式。 |
 
 只列出裝置、不開收音或模型：
 
 ```powershell
-& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" "$env:LOCALAPPDATA\emotion-stt-test\transcribe_mic.py" --list-devices
+& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" -B .\tools\voice_companion\transcribe_mic.py --list-devices
 ```
 
 若要確認 8000 上是否有後端，可在另一個空閒 PowerShell 執行：
@@ -187,6 +235,18 @@ Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
 本測試模式預期 `status` 是 `ok`、`db_path` 是 `:memory:`。這只能確認後端與資料庫選項，**不能單靠 health 成功就判斷語音互動已啟用**；仍需看文字 POST 的 `200 OK` 與網頁回覆。
+
+### 開發驗證：不開相機或麥克風
+
+在專題根目錄執行，語音測試用外部環境，後端測試用專題環境，不要混用：
+
+```powershell
+& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" -B -X utf8 -m unittest discover -s .\tools\voice_companion -v
+.\.venv\Scripts\python.exe -B -X utf8 -m unittest discover -s tests -v
+node --test tests/test_live_freshness.cjs tests/test_companion_dialogue.cjs
+```
+
+語音測試使用合成資料與 mock，不會下載模型、開收音或傳送私人錄音；通過不代表真人語意準確率或樹莓派跨裝置測試通過。真人驗收仍依步驟 5、6，另外確認安靜時不亂出字、停止清空及重啟恢復。
 
 ## Quick Start
 

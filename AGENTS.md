@@ -283,3 +283,15 @@ python app.py --vision-only
 - README 新增筆電語音互動專節與入口連結，保留原 Quick Start／一般情緒儀表板內容，並提醒其指令不會啟用語音接收。分開說明 PowerShell A 的專題 `.venv`、PowerShell B 的外部轉錄 `.venv`、工作目錄、既有環境需求、完整參數、預期訊息、瀏覽器操作、驗收例句及停止順序。
 - 明列 `--companion-local` 與 `--web-url` 不能漏掉、只支援本機、`:memory:` 不讀寫正式情緒紀錄、表情等待狀態屬預期、安靜回覆不會停止收音。補上 404／409、port 占用、終端機有字而網頁沒字、模型／外部檔案缺失、麥克風選擇與逾時的排查方式。提醒外部工具不隨 Git 提交或 clone，以及 health 成功不等於語音接收已啟用。
 - 驗證方式：比對目前後端與外部轉錄程式的實際參數，分別執行兩支程式的 `--help`（不開收音、不啟動伺服器、不載入模型），檢查 README 新增內容與 Markdown 格式、`git diff --check`。本次是文件更新，未重跑真人收音或瀏覽器驗收、未安裝套件、未刪資料、未操作 git add／commit／push／切換分支；提交指令僅提供給使用者手動執行，並提醒外部程式尚不受本 repo 管理。
+
+## 樹莓派語音互動準備：工具納入專案（2026-11-16）
+- 使用者確認最終方向為「Pi 麥克風收音 → 筆電 Whisper 轉文字與固定規則回覆 → 文字傳回 Pi 後端 → 原樹莓派網頁顯示」，並授權開始實作。本回合只完成第一步：從 `codex/rpi-ferplus-test` 的 `1c4367a` 建立並切換至本機 `codex/rpi-voice-companion`，整理既有筆電工具；沒有合併 `main` 或 `feature/rpi-camera-support`，沒有建立遠端分支、暫存、提交或推送。
+- 使用者在前次對話已回報舊外部工具的真人網頁驗收：四句有更新、網頁與終端機一致、停止清空、重啟恢復、該次安靜觀察沒有亂出字。這補充先前「未測真人」的狀態，但只代表使用者當次功能觀察，不是一般語意準確率、長時間靜音保證或 Pi 傳音驗收。搬入後的真人測試仍需另做。
+- 新增 `tools/voice_companion/`，從外部 `C:\Users\QAQBl\AppData\Local\emotion-stt-test\` 複製 `transcribe_mic.py`、`dog_reply.py`、`web_reply.py` 與對應三支 `test_*.py`。複製時六檔 SHA-256 與原檔一致；之後只調整專案內轉錄腳本的模型快取定位、增加相關測試與獨立 `requirements.txt`，外部原檔、環境、模型與錄音全部保留。沒有納入 `.venv`、模型快取、私人音訊或逐字稿。
+- `transcribe_mic.py` 不再以腳本所在資料夾尋找模型，Windows 預設沿用 `%LOCALAPPDATA%\emotion-stt-test\models`；沒有 `LOCALAPPDATA` 時改用 `~/.cache/emotion-stt-test/models`。新增 `--model-dir` 可指定既有 base 模型的下載快取根目錄，並印出 `Model cache:`。仍使用多語言 base、CPU INT8、`HF_HUB_OFFLINE=1`、`local_files_only=True`；缺模型報錯，不自動下載或改用其他模型。Linux 的預設路徑只有 mock 測試，未測 Linux 收音。
+- 收音、16 kHz 單聲道、切句、RMS 門檻、回覆規則、否定處理、容量與逾時、原本本機限定的 `--web-url` 都保持不變。新增 `requirements.txt` 記錄現有 Python 3.11 語音環境的 faster-whisper 1.2.1、ctranslate2 4.8.5、numpy 2.4.6、sounddevice 0.5.6、soundfile 0.14.0；未鎖定所有間接依賴，未執行新環境安裝，不宣稱全新機器安裝已驗證。不要把這份清單裝進正式情緒辨識 `.venv` 或 Pi。
+- 更新根目錄 `README.md` 的語音啟動與懶人包，保留既有章節：改執行專案內腳本、說明新機器的兩套環境與首次模型下載、列裝置與獨立測試方式。已備妥這台筆電可直接沿用外部 `.venv` 和模型，不須安裝或下載。兩個 PowerShell 都從專題根目錄執行；後端仍用 `--host 127.0.0.1 --db :memory: --companion-local`，語音指令為 `& "$env:LOCALAPPDATA\emotion-stt-test\.venv\Scripts\python.exe" -B .\tools\voice_companion\transcribe_mic.py --web-url http://127.0.0.1:8000`。若選 8001，後端、轉錄網址與瀏覽器三處同步修改。
+- 驗證：搬入前外部原版 52 項測試通過；搬入後用外部語音 Python 執行 `-B -X utf8 -m unittest discover -s .\tools\voice_companion -v` 共 57 項通過，新增 5 項涵蓋快取預設路徑、明確覆寫、無 LOCALAPPDATA、缺檔不改線上下載及 CLI 傳遞。專題 Python 的 `-B -X utf8 -m unittest discover -s tests -v` 10 項通過；`node --test tests/test_live_freshness.cjs tests/test_companion_dialogue.cjs` 24 項通過。既有 TestClient httpx 棄用警告仍在，未為此更新套件。
+- 另確認專案內 `--help` 可用，實際載入外部既有 Whisper 快取並轉錄一秒合成靜音，結果為空字串；沒有讀私人錄音或開真實麥克風。README 的 22 段 PowerShell 通過語法解析、74 行程式碼圍欄成對、`git diff --check` 通過。這次未重跑瀏覽器、未啟動後端或正式 `app.py`，也未接觸正式資料庫與自動清理。
+- 近期 Pi 排查背景：使用者曾回報網頁固定約 10 秒前，瀏覽器紀錄 ID 持續增加、接收間隔小於一秒；校時排查後畫面恢復「資料持續更新／0 秒前」，支持跨裝置時鐘落差引發過期判定，未在本回合修正 freshness 邏輯。畫面仍曾顯示未偵測到臉，不能宣稱影像辨識已完整恢復。使用者另回報 Pi 無散熱片／風扇、辨識時約 70°C，未由工具量測；傳音整合後需比較溫度、FPS 與延遲，不預先承諾效能不變。
+- 下一步才是 Pi 左聲道單次收音分流與有驗證的跨裝置傳輸，先確認筆電終端機轉錄，再接回 Pi 網頁。此次沒有修改 `src/`、後端、前端、現有 config／requirements、情緒模型或語意規則；沒有 Tailscale 設定、網路安全限制放寬、LLM、TTS、語音控制動畫。既有未追蹤訓練產物與日誌未刪除或暫存。
