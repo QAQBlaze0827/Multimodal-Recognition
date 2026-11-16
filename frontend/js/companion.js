@@ -4,6 +4,10 @@ let companionVoiceState = 'connecting';
 let companionVoiceDeadline = 0;
 let companionReply = null;
 let companionLastMessageId = null;
+// Convert only displayed transcripts; keep incoming text and reply decisions intact.
+const companionToTraditional = typeof OpenCC !== 'undefined'
+    ? OpenCC.Converter({ from: 'cn', to: 'tw' }) : value => value;
+if (typeof OpenCC === 'undefined') console.warn('Transcript converter unavailable; showing original text.');
 
 const COMPANION_TEXT = {
     zh: {
@@ -60,7 +64,7 @@ function renderCompanionDialogue(now = Date.now()) {
     text('companion-voice-status', labels[companionVoiceState]);
     document.getElementById('companion-voice-status').dataset.state = companionVoiceState;
     text('companion-reply', companionReply ? companionReply.reply : labels.emptyReply);
-    text('companion-transcript', companionReply ? companionReply.text : labels.emptyText);
+    text('companion-transcript', companionReply ? companionToTraditional(companionReply.text) : labels.emptyText);
     const stamp = document.getElementById('companion-reply-time');
     stamp.hidden = !companionReply;
     if (companionReply) {
