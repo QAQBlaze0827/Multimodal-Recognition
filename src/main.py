@@ -33,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default="config/config.yaml")
     parser.add_argument("--vision-only", action="store_true")
     parser.add_argument("--audio-only", action="store_true")
+    parser.add_argument("--stt-url", help="Opt-in selected microphone PCM to a trusted laptop HTTP receiver.")
     parser.add_argument("--video-model", choices=("legacy", "ferplus"), default="legacy",
                         help="legacy: configured video model (default); ferplus: pinned local candidate.")
     parser.add_argument("--no-display", action="store_true")
@@ -47,9 +48,20 @@ def main() -> None:
     if args.audio_only and args.video_model != "legacy":
         parser.error("--video-model ferplus cannot be used with --audio-only")
     config = load_config(args.config)
+    args.audio_sender = None
+    if args.stt_url:
+        if args.vision_only or not config["audio"].get("enabled", True):
+            parser.error("--stt-url requires enabled audio and cannot use --vision-only")
+        from src.audio.remote import AudioSender, read_token
+
+        try:
+            rate = int(config["audio"].get("input_sample_rate", config["audio"]["sample_rate"]))
+            args.audio_sender = AudioSender(args.stt_url, read_token(), rate)
+        except ValueError as exc:
+            parser.error(str(exc))
 
     if args.audio_only:
-        run_audio_only(config)
+        run_audio_only(config, args.audio_sender)
         return
     run_video_loop(config, args)
 
@@ -91,7 +103,7 @@ def run_video_loop(config: dict, args) -> None:
     audio_thread = None
     if not args.vision_only and config["audio"].get("enabled", True):
         audio_model = AudioEmotionModel(config["audio"]["model"]["path"], config["audio"]["model"].get("calibration"))
-        audio_thread = AudioEmotionThread(state, config["audio"], audio_model)
+        audio_thread = AudioEmotionThread(state, config["audio"], audio_model, sender=getattr(args, "audio_sender", None))
         audio_thread.start()
 
     logger_cfg = output_cfg["csv_log"]
@@ -166,7 +178,7 @@ def run_video_loop(config: dict, args) -> None:
     finally:
         state.stop = True
         if audio_thread is not None:
-            audio_thread.join(timeout=2.0)
+            audio_thread.join(timeout=5.0)
         logger.close()
         if db_logger is not None:
             db_logger.close()
@@ -176,14 +188,14 @@ def run_video_loop(config: dict, args) -> None:
             cv2.destroyAllWindows()
 
 
-def run_audio_only(config: dict) -> None:
+def run_audio_only(config: dict, sender=None) -> None:
     state = RuntimeState()
     audio_model = AudioEmotionModel(config["audio"]["model"]["path"], config["audio"]["model"].get("calibration"))
-    thread = AudioEmotionThread(state, config["audio"], audio_model)
+    thread = AudioEmotionThread(state, config["audio"], audio_model, sender=sender)
     thread.start()
     print("[audio] audio-only mode. Press Ctrl+C to stop.")
     try:
-        while True:
+        while thread.is_alive():
             with state.lock:
                 audio = state.audio
             if audio is not None:
@@ -191,7 +203,7 @@ def run_audio_only(config: dict) -> None:
             time.sleep(1.0)
     except KeyboardInterrupt:
         state.stop = True
-        thread.join(timeout=2.0)
+        thread.join(timeout=5.0)
 
 
 def read_cpu_temp() -> float | None:

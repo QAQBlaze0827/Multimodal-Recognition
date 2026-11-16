@@ -1,6 +1,7 @@
 # Laptop-only Python 3.11 environment; do not install into the emotion runtime.
 # Versions from the working prototype. Transitive dependencies are not locked.
 faster-whisper==1.2.1
+av==18.1.0
 ctranslate2==4.8.5
 numpy==2.4.6
 sounddevice==0.5.6

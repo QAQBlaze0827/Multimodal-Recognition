@@ -10,11 +10,12 @@ from src.shared_types import make_result
 
 
 class AudioEmotionThread(threading.Thread):
-    def __init__(self, state, config: dict, model: AudioEmotionModel) -> None:
+    def __init__(self, state, config: dict, model: AudioEmotionModel, sender=None) -> None:
         super().__init__(daemon=True)
         self.state = state
         self.config = config
         self.model = model
+        self.sender = sender
         smoothing = config.get("temporal_smoothing", {})
         self.smooth_alpha = float(smoothing.get("alpha", 0.7)) if smoothing.get("enabled", True) else 0.0
         self._smoothed_scores: dict[str, float] | None = None
@@ -51,75 +52,90 @@ class AudioEmotionThread(threading.Thread):
             else:
                 chunk = indata.reshape(-1)
 
+            if self.sender is not None:
+                self.sender.offer(chunk, status)
+
             with self._buffer_lock:
                 self._ring_buffer = np.concatenate([self._ring_buffer, chunk.astype(np.float32).reshape(-1)])
                 if len(self._ring_buffer) > window_frames:
                     self._ring_buffer = self._ring_buffer[-window_frames:]
 
-        stream = sd.InputStream(
-            samplerate=input_sample_rate,
-            channels=channels,
-            device=device,
-            dtype="float32",
-            callback=callback,
-        )
-        stream.start()
-
-        while not self.state.stop:
-            sd.sleep(int(self._hop_seconds * 1000))
-
-            with self._buffer_lock:
-                if len(self._ring_buffer) < window_frames:
-                    continue
-                samples = self._ring_buffer.copy()
-
-            if input_sample_rate != sample_rate:
-                ratio = input_sample_rate // sample_rate
-                samples = samples[::ratio]
-
-            peak = float(np.max(np.abs(samples)))
-            if peak > 1e-8:
-                samples = samples / peak
-
-            rms = float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
-            if rms < self._vad_threshold:
-                with self.state.lock:
-                    self.state.audio = None
-                self._smoothed_scores = None
-                continue
-
-            samples = highpass_filter(samples, sample_rate=sample_rate, cutoff_hz=hp_cutoff)
-
-            mfcc_cfg = self.config["mfcc"]
-            features = extract_light_mfcc_like(
-                samples,
-                sample_rate=sample_rate,
-                n_mfcc=int(mfcc_cfg["n_mfcc"]),
-                n_fft=int(mfcc_cfg["n_fft"]),
-                hop_length=int(mfcc_cfg["hop_length"]),
-                include_delta=bool(mfcc_cfg.get("include_delta", False)),
+        stream = None
+        try:
+            stream = sd.InputStream(
+                samplerate=input_sample_rate,
+                channels=channels,
+                device=device,
+                dtype="float32",
+                callback=callback,
+                **({"blocksize": self.sender.block_size} if self.sender is not None else {}),
             )
-            result = self.model.predict(features)
+            stream.start()
+            if self.sender is not None:
+                self.sender.start()
 
-            if result.confidence <= 0.0:
-                self._smoothed_scores = None
+            while not self.state.stop:
+                sd.sleep(int(self._hop_seconds * 1000))
+
+                with self._buffer_lock:
+                    if len(self._ring_buffer) < window_frames:
+                        continue
+                    samples = self._ring_buffer.copy()
+
+                if input_sample_rate != sample_rate:
+                    ratio = input_sample_rate // sample_rate
+                    samples = samples[::ratio]
+
+                peak = float(np.max(np.abs(samples)))
+                if peak > 1e-8:
+                    samples = samples / peak
+
+                rms = float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
+                if rms < self._vad_threshold:
+                    with self.state.lock:
+                        self.state.audio = None
+                    self._smoothed_scores = None
+                    continue
+
+                samples = highpass_filter(samples, sample_rate=sample_rate, cutoff_hz=hp_cutoff)
+
+                mfcc_cfg = self.config["mfcc"]
+                features = extract_light_mfcc_like(
+                    samples,
+                    sample_rate=sample_rate,
+                    n_mfcc=int(mfcc_cfg["n_mfcc"]),
+                    n_fft=int(mfcc_cfg["n_fft"]),
+                    hop_length=int(mfcc_cfg["hop_length"]),
+                    include_delta=bool(mfcc_cfg.get("include_delta", False)),
+                )
+                result = self.model.predict(features)
+
+                if result.confidence <= 0.0:
+                    self._smoothed_scores = None
+                    with self.state.lock:
+                        self.state.audio = None
+                    continue
+
+                if self.smooth_alpha > 0:
+                    if self._smoothed_scores is None:
+                        self._smoothed_scores = dict(result.scores)
+                    else:
+                        alpha = self.smooth_alpha
+                        for emotion in result.scores:
+                            self._smoothed_scores[emotion] = (
+                                alpha * self._smoothed_scores[emotion]
+                                + (1 - alpha) * result.scores[emotion]
+                            )
+                    result = make_result("audio", self._smoothed_scores)
+
+                with self.state.lock:
+                    self.state.audio = result
+        finally:
+            try:
+                if stream is not None:
+                    stream.close()
+            finally:
+                if self.sender is not None:
+                    self.sender.close()
                 with self.state.lock:
                     self.state.audio = None
-                continue
-
-            if self.smooth_alpha > 0:
-                if self._smoothed_scores is None:
-                    self._smoothed_scores = dict(result.scores)
-                else:
-                    alpha = self.smooth_alpha
-                    for emotion in result.scores:
-                        self._smoothed_scores[emotion] = (
-                            alpha * self._smoothed_scores[emotion]
-                            + (1 - alpha) * result.scores[emotion]
-                        )
-                result = make_result("audio", self._smoothed_scores)
-
-            with self.state.lock:
-                self.state.audio = result
-
-        stream.stop()
