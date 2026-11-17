@@ -326,3 +326,11 @@ python app.py --vision-only
 - 新增 `test_start_receiver.ps1`、`test_start_sender.py`。Windows PowerShell 真實 DPAPI／ACL 的 12 個檢查通過：沿用父層 IP／金鑰、密文可還原、磁碟與輸出不含明文 token、保存後無提示及不覆寫、非法 IP／token／過寬權限拒絕、缺值才詢問。WSL Ubuntu 的 Linux 測試 12 項通過，含實際 POSIX 700／600、損毀保留、連結與權限拒絕、缺值／保存優先、mock exec 不把金鑰放進參數，以及真實 Bash source + 合成子程式確認普通變數繼承、原 shell 繼續且 cwd 不變；不是 Pi 硬體驗收。
 - 回歸：Windows STT unittest 共 85 項（75 通過、10 項 Linux 專用略過，已另在 WSL 執行）；專題 unittest 21 項、Node 即時／對話 30 項通過；Bash 語法檢查通過。既有 TestClient 棄用警告及缺字典模擬警告保持原樣。測試只使用臨時目錄的合成憑證，Windows `Temp/voice-launcher-test-*` 與 WSL `/tmp/voice-*-test-*` 保留、不刪除；沒有讀取或建立使用者真實連線設定、開真實麥克風／相機、啟動真實模型／接收器、改防火牆／執行原則或安裝套件。
 - README 最上方新增兩個日常指令；REMOTE_AUDIO.md 新增首次沿用設定與保存位置，保留既有手動流程並清楚區隔。使用者需先自行提交、推送並讓 Pi 更新新增腳本，才能在原終端機匯入設定；本次沒有 git add／commit／push／切換分支、刪檔或修改既有未追蹤產物。下一步先驗收保存後重啟，再處理文字回傳 Pi 網頁。
+
+## 相機預覽分離影像與資訊（2026-11-17）
+- 使用者已回報 Pi 桌面與 VNC 可開啟，OpenCV 4.11.0 顯示 QT5 支援，但原 320×240 預覽被六行除錯文字遮住。經確認，在既有 `codex/rpi-voice-companion` 修改 `src/output/display.py`、`src/main.py`，新增 `tests/test_preview_display.py`；只調整顯示，不改相機解析度、模型、音訊、融合、網頁、設定或資料庫行為。
+- 預覽建立 960×700 顯示副本：上方 960×540 區域等比例放置影像、留黑邊，依縮放比例畫人臉框；下方 160px 分兩欄顯示 Face／Video／Audio／Fused／FPS／溫度與分數非準確率提示。移除座標、模型後端等冗長疊字，原相機 frame 不被修改。使用英文標籤避免 OpenCV 內建字型不支援中文字；沒有新增中文字型或套件。
+- `draw_overlay()` 現在回傳預覽影像，主循環將回傳值交給 imshow；只在顯示模式建立 WINDOW_NORMAL／WINDOW_KEEPRATIO／WINDOW_GUI_NORMAL 視窗並設定初始尺寸，Qt 模式不顯示原工具列。沒有臉或零信心度時不顯示預設中性為有效影像結果；無有效輸入時 Fused 顯示 `--`。這只是預覽表達，不修改原模型分數、融合、正式日誌或網頁顯示。
+- 驗證：專題 `.venv` 執行 `python -B -m unittest discover -s tests -v` 共 28 項通過（原 21＋新增 7），覆蓋原 frame 不變、人臉框位置、橫直影像比例、文字邊界、缺臉／零信心度／缺溫度／audio gating、模擬顯示初始化與 headless 不呼叫 GUI。以真實 OpenCV 渲染合成預覽 PNG 並人工檢視，未見重疊／裁字，保留於 Windows Temp 的 `emotion-preview-h9whnm0x/preview.png`。`git diff --check` 通過；既有 httpx 棄用警告未處理。
+- 未開實體相機／麥克風、未啟動正式後端或資料庫、未操作真實 VNC 視窗；Pi 拖曳縮放、FPS、溫度尚待實機確認，顯示放大仍有額外繪製／傳輸成本，不宣稱效能不變。維持 `--no-display` 原行為，SSH 無桌面時仍可使用；本次不更動系統 VNC、Qt、桌面或相依套件。
+- 部署由使用者確認指定四檔後自行提交並 push `codex/rpi-voice-companion`；Pi 先確認同分支且工作目錄乾淨，再 `git pull --ff-only origin codex/rpi-voice-companion`。停止原相機程序，在 VNC 桌面終端機執行 `./.venv/bin/python app.py --vision-only --video-model ferplus`（不加 `--no-display`），確認人臉框、資訊區、拖曳縮放與按 q 離開；需語音時移除 `--vision-only`。本次沒有 git add／commit／push／切換分支、刪除資料或處理既有未追蹤產物。

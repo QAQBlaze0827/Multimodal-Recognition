@@ -10,7 +10,7 @@ from src.audio.model import AudioEmotionModel
 from src.config import load_config
 from src.fusion.late_fusion import confidence_weighted_fusion
 from src.output.db_logger import DbLogger
-from src.output.display import draw_overlay
+from src.output.display import PREVIEW_SIZE, draw_overlay
 from src.output.logger import CsvLogger
 from src.shared_types import EmotionResult
 from src.video.capture import open_camera
@@ -128,6 +128,9 @@ def run_video_loop(config: dict, args) -> None:
     display = output_cfg["display"]["show_video"] and not args.no_display
 
     try:
+        if display:
+            cv2.namedWindow("Multimodal Emotion Recognition", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+            cv2.resizeWindow("Multimodal Emotion Recognition", *PREVIEW_SIZE)
         while True:
             ok, frame = cap.read()
             if not ok:
@@ -167,8 +170,8 @@ def run_video_loop(config: dict, args) -> None:
                 db_logger.write(result, audio, fused, fps, temp)
 
             if display:
-                draw_overlay(cv2, frame, result, audio, fused, fps, temp, audio_gated)
-                cv2.imshow("Multimodal Emotion Recognition", frame)
+                preview = draw_overlay(cv2, frame, result, audio, fused, fps, temp, audio_gated)
+                cv2.imshow("Multimodal Emotion Recognition", preview)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
             if args.max_frames and total_frames >= args.max_frames:
