@@ -3,6 +3,7 @@ let replayData = [];
 let replayIndex = 0;
 let replayTimer = null;
 let replaySpeed = 1;
+let analyticsRequestId = 0;
 let liveTrend = [];
 let lastLiveData = null;
 let lastLiveReceivedAt = null;
@@ -86,7 +87,7 @@ const UI_TEXT = {
         emotion: '情緒',
         confidence: '可信度',
         videoAudio: '視覺/音訊',
-        analyticsTitle: '情緒分布',
+        analyticsTitle: '綜合辨識統計',
         period: '期間：',
         sevenDays: '最近 7 天',
         thirtyDays: '最近 30 天',
@@ -168,7 +169,7 @@ const UI_TEXT = {
         emotion: 'Emotion',
         confidence: 'Confidence',
         videoAudio: 'Video/Audio',
-        analyticsTitle: 'Emotion Distribution',
+        analyticsTitle: 'Fused Recognition Statistics',
         period: 'Period: ',
         sevenDays: 'Last 7 days',
         thirtyDays: 'Last 30 days',
@@ -247,7 +248,7 @@ function applyLanguage() {
     if (tempLabel) tempLabel.textContent = tr('temperature');
     if (faceLabel) faceLabel.textContent = tr('faceDetected');
     setText('#view-history .card > h2', 'historyTitle');
-    setText('#view-analytics .card > h2', 'analyticsTitle');
+    setText('#analytics-heading', 'analyticsTitle');
     setText('#insight-face', 'waiting');
     setText('#insight-audio', 'waiting');
     setText('#insight-agreement', 'waiting');
@@ -807,33 +808,80 @@ function initAnalyticsView() {
 }
 
 async function loadAnalytics() {
+    const requestId = ++analyticsRequestId;
     const days = parseInt(document.getElementById('analytics-days').value) || 30;
+    clearAnalytics();
+    document.getElementById('analytics-status').textContent = tr('loading');
     try {
         const data = await getAnalytics(days);
-        if (!data.distribution || Object.keys(data.distribution).length === 0) {
-            document.getElementById('analytics-summary').innerHTML =
-                `<p>${currentLang === 'zh' ? '這段期間沒有資料。' : 'No data for this period.'}</p>`;
-            document.getElementById('analytics-insight').textContent =
-                currentLang === 'zh' ? '選取的期間內沒有情緒紀錄。' : 'No emotion records were found in the selected period.';
-            return;
-        }
-        createPieChart('analytics-pie', data.distribution);
-        const top = distributionTop(data.distribution);
-        if (top) {
-            const [emotion, info] = top;
-            document.getElementById('analytics-insight').textContent = currentLang === 'zh'
-                ? `主要趨勢：「${formatEmotion(emotion)}」是最常出現的情緒（${info.pct}%），該情緒平均可信度 ${Math.round((info.avg_conf || 0) * 100)}%。`
-                : `Main pattern: ${formatEmotion(emotion)} is the most frequent emotion (${info.pct}%). Average confidence for that emotion is ${Math.round((info.avg_conf || 0) * 100)}%.`;
-        }
-        document.getElementById('analytics-summary').innerHTML = `
-            <div class="grid-3">
-                <div class="stat-box"><div class="value">${data.total_logs}</div><div class="label">${currentLang === 'zh' ? '總紀錄' : 'Total Records'}</div></div>
-                <div class="stat-box"><div class="value">${data.session_count}</div><div class="label">Sessions</div></div>
-                <div class="stat-box"><div class="value">${currentLang === 'zh' ? `${days} 天` : `${days}d`}</div><div class="label">${currentLang === 'zh' ? '期間' : 'Period'}</div></div>
-            </div>
-        `;
+        if (requestId !== analyticsRequestId) return;
+        if (!Number.isInteger(data.valid_logs)) throw new Error('Analytics response needs updated backend');
+        renderAnalytics(data);
     } catch (e) {
+        if (requestId !== analyticsRequestId) return;
+        clearAnalytics();
+        document.getElementById('analytics-status').textContent = currentLang === 'zh'
+            ? '統計載入失敗，請確認後端已更新並重新整理頁面。'
+            : 'Statistics could not be loaded. Check the updated backend and reload.';
         console.error('Analytics load error:', e);
+    }
+}
+
+function clearAnalytics() {
+    if (pieChart) {
+        pieChart.destroy();
+        pieChart = null;
+    }
+    document.getElementById('analytics-distribution').hidden = true;
+    for (const id of ['analytics-summary', 'analytics-table-head', 'analytics-table-body',
+        'analytics-range', 'analytics-quality', 'analytics-insight', 'analytics-status']) {
+        document.getElementById(id).textContent = '';
+    }
+}
+
+function renderAnalytics(data) {
+    const zh = currentLang === 'zh';
+    const threshold = Math.round(data.low_score_threshold * 100);
+    const metrics = [
+        [data.total_logs, zh ? '總紀錄' : 'Total records'],
+        [data.valid_logs, zh ? '有效紀錄（分布分母）' : 'Valid records (denominator)'],
+        [data.low_score_logs, zh ? `其中低分數（低於 ${threshold}%）` : `Of valid: score below ${threshold}%`],
+        [data.excluded_logs, zh ? '未納入分布' : 'Excluded records'],
+    ];
+    document.getElementById('analytics-summary').innerHTML = metrics.map(([count, label]) =>
+        `<div class="stat-box"><div class="value">${Number(count)}</div><div class="label">${label}</div></div>`
+    ).join('');
+    document.getElementById('analytics-status').textContent = data.total_logs === 0
+        ? (zh ? '選取期間沒有紀錄。' : 'No records in this period.')
+        : data.valid_logs === 0
+            ? (zh ? '有紀錄，但沒有可納入情緒分布的有效結果。' : 'Records exist, but none have a valid result for the distribution.')
+            : '';
+    document.getElementById('analytics-range').textContent = data.total_logs === 0 ? '' : (zh
+        ? `實際紀錄範圍：${data.first_record} ～ ${data.last_record}；共 ${data.session_count} 次使用紀錄。`
+        : `Recorded range: ${data.first_record} to ${data.last_record}; ${data.session_count} sessions.`);
+    document.getElementById('analytics-quality').textContent = zh
+        ? `未納入：無有效來源或來源欄位不足 ${data.no_source_logs} 筆；有來源但綜合結果無效 ${data.unresolved_logs} 筆。有效紀錄須有有效臉部或語音來源，且綜合類別與分數有效。`
+        : `Excluded: ${data.no_source_logs} without a valid source or sufficient source fields; ${data.unresolved_logs} with a source but no valid fused result. Valid records require a valid face or audio source and a valid fused label and score.`;
+    document.getElementById('analytics-insight').textContent = zh
+        ? `情緒占比以 ${data.valid_logs} 筆有效紀錄為分母，包含低分數紀錄。${threshold}% 僅為分數分類門檻，不代表對錯；模型分數不是準確率，紀錄占比不是情緒持續時間或心理評估。`
+        : `Distribution uses ${data.valid_logs} valid records, including low scores. ${threshold}% is a grouping threshold, not a correctness test. Model scores are not accuracy; record shares are not emotion duration or a psychological assessment.`;
+    if (!data.valid_logs) return;
+
+    document.getElementById('analytics-distribution').hidden = false;
+    const headings = zh ? ['情緒', '筆數', '紀錄占比', '平均模型分數']
+        : ['Emotion', 'Records', 'Record share', 'Mean model score'];
+    document.getElementById('analytics-table-head').innerHTML = headings.map(text => `<th scope="col">${text}</th>`).join('');
+    document.getElementById('analytics-table-body').innerHTML = ['neutral', 'happy', 'sad', 'anger'].map(emotion => {
+        const item = data.distribution[emotion];
+        return `<tr><td>${formatEmotion(emotion)}</td><td>${Number(item?.count || 0)}</td>
+            <td>${Number(item?.pct || 0).toFixed(1)}%</td><td>${item ? (Number(item.avg_conf) * 100).toFixed(1) + '%' : '--'}</td></tr>`;
+    }).join('');
+    document.getElementById('analytics-pie').setAttribute('aria-label', zh ? '有效綜合情緒紀錄分布' : 'Valid fused emotion record distribution');
+    if (typeof Chart === 'undefined') {
+        document.getElementById('analytics-status').textContent = zh
+            ? '圖表元件未載入，統計數值仍可查看。' : 'Chart library unavailable; statistics remain available in the table.';
+    } else {
+        createPieChart('analytics-pie', data.distribution);
     }
 }
 

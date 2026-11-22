@@ -227,8 +227,8 @@
 
 <!-- ==================== ANALYTICS VIEW ==================== -->
 <section id="view-analytics" class="view">
-    <div class="card">
-        <h2>情緒分布</h2>
+    <div class="analytics-content">
+        <h2 id="analytics-heading">綜合辨識統計</h2>
         <div class="filter-bar">
             <label>期間：<select id="analytics-days">
                 <option value="7">最近 7 天</option>
@@ -237,10 +237,21 @@
                 <option value="365">最近一年</option>
             </select></label>
         </div>
-        <div id="analytics-summary"></div>
-        <div id="analytics-insight" class="summary-line">選擇期間後，這裡會整理主要情緒分布。</div>
-        <div class="chart-container" style="height: 300px;">
-            <canvas id="analytics-pie"></canvas>
+        <div id="analytics-status" class="summary-line" role="status" aria-live="polite"></div>
+        <div id="analytics-summary" class="analytics-metrics"></div>
+        <div id="analytics-range" class="summary-line"></div>
+        <div id="analytics-quality" class="summary-line"></div>
+        <div id="analytics-insight" class="summary-line"></div>
+        <div id="analytics-distribution" class="analytics-distribution" hidden>
+            <div class="chart-container analytics-chart">
+                <canvas id="analytics-pie" role="img" aria-label="情緒紀錄分布"></canvas>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr id="analytics-table-head"></tr></thead>
+                    <tbody id="analytics-table-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </section>

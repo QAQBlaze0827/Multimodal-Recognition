@@ -218,29 +218,57 @@ def get_emotion_timeline(db_path: str, session_id: str) -> list[dict[str, Any]]:
 
 def get_analytics_summary(db_path: str, days: int = 30) -> dict[str, Any]:
     conn = _get_conn(db_path)
-    since = (datetime.now() - timedelta(days=days)).isoformat()
+    now = datetime.now()
+    since = (now - timedelta(days=days)).isoformat()
+    # This is a display grouping, not an inference threshold or an accuracy claim.
+    low_score_threshold = 0.5
     rows = conn.execute(
-        """SELECT fused_emotion, COUNT(*) as cnt, AVG(fused_conf) as avg_conf
-           FROM emotion_logs
-           WHERE timestamp >= ?
-           GROUP BY fused_emotion
-           ORDER BY cnt DESC""",
-        (since,),
+        """WITH classified AS (
+            SELECT *, CASE
+                WHEN NOT (
+                    COALESCE(face_detected = 1 AND video_emotion IN ('neutral','happy','sad','anger')
+                        AND typeof(video_conf) IN ('real','integer') AND video_conf > 0 AND video_conf <= 1, 0)
+                    OR COALESCE(audio_emotion IN ('neutral','happy','sad','anger')
+                        AND typeof(audio_conf) IN ('real','integer') AND audio_conf > 0 AND audio_conf <= 1, 0)
+                ) THEN 'no_source'
+                WHEN fused_emotion IN ('neutral','happy','sad','anger')
+                    AND typeof(fused_conf) IN ('real','integer') AND fused_conf > 0 AND fused_conf <= 1
+                    THEN 'valid'
+                ELSE 'unresolved'
+            END AS quality
+            FROM emotion_logs WHERE timestamp >= ? AND timestamp <= ?
+        )
+        SELECT quality, CASE WHEN quality = 'valid' THEN fused_emotion END AS emotion,
+            COUNT(*) AS cnt,
+            AVG(CASE WHEN quality = 'valid' THEN fused_conf END) AS avg_conf,
+            SUM(CASE WHEN quality = 'valid' AND fused_conf < ? THEN 1 ELSE 0 END) AS low_count,
+            MIN(timestamp) AS first_record, MAX(timestamp) AS last_record,
+            (SELECT COUNT(DISTINCT session_id) FROM classified) AS session_count
+        FROM classified GROUP BY quality, emotion ORDER BY cnt DESC, emotion""",
+        (since, now.isoformat(), low_score_threshold),
     ).fetchall()
     total = sum(r["cnt"] for r in rows)
+    valid = sum(r["cnt"] for r in rows if r["quality"] == "valid")
     distribution = {}
     for r in rows:
-        distribution[r["fused_emotion"]] = {
+        if r["quality"] != "valid":
+            continue
+        distribution[r["emotion"]] = {
             "count": r["cnt"],
-            "pct": round(r["cnt"] / total * 100, 1) if total else 0,
+            "pct": round(r["cnt"] / valid * 100, 1),
             "avg_conf": round(r["avg_conf"], 3),
         }
-    session_count = conn.execute(
-        "SELECT COUNT(*) FROM sessions WHERE start_time >= ?", (since,)
-    ).fetchone()[0]
     return {
         "total_logs": total,
-        "session_count": session_count,
+        "valid_logs": valid,
+        "excluded_logs": total - valid,
+        "no_source_logs": sum(r["cnt"] for r in rows if r["quality"] == "no_source"),
+        "unresolved_logs": sum(r["cnt"] for r in rows if r["quality"] == "unresolved"),
+        "low_score_logs": sum(r["low_count"] for r in rows),
+        "low_score_threshold": low_score_threshold,
+        "session_count": rows[0]["session_count"] if rows else 0,
+        "first_record": min((r["first_record"] for r in rows), default=None),
+        "last_record": max((r["last_record"] for r in rows), default=None),
         "distribution": distribution,
     }
 

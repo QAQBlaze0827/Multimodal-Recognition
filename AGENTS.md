@@ -334,3 +334,14 @@ python app.py --vision-only
 - 驗證：專題 `.venv` 執行 `python -B -m unittest discover -s tests -v` 共 28 項通過（原 21＋新增 7），覆蓋原 frame 不變、人臉框位置、橫直影像比例、文字邊界、缺臉／零信心度／缺溫度／audio gating、模擬顯示初始化與 headless 不呼叫 GUI。以真實 OpenCV 渲染合成預覽 PNG 並人工檢視，未見重疊／裁字，保留於 Windows Temp 的 `emotion-preview-h9whnm0x/preview.png`。`git diff --check` 通過；既有 httpx 棄用警告未處理。
 - 未開實體相機／麥克風、未啟動正式後端或資料庫、未操作真實 VNC 視窗；Pi 拖曳縮放、FPS、溫度尚待實機確認，顯示放大仍有額外繪製／傳輸成本，不宣稱效能不變。維持 `--no-display` 原行為，SSH 無桌面時仍可使用；本次不更動系統 VNC、Qt、桌面或相依套件。
 - 部署由使用者確認指定四檔後自行提交並 push `codex/rpi-voice-companion`；Pi 先確認同分支且工作目錄乾淨，再 `git pull --ff-only origin codex/rpi-voice-companion`。停止原相機程序，在 VNC 桌面終端機執行 `./.venv/bin/python app.py --vision-only --video-model ferplus`（不加 `--no-display`），確認人臉框、資訊區、拖曳縮放與按 q 離開；需語音時移除 `--vision-only`。本次沒有 git add／commit／push／切換分支、刪除資料或處理既有未追蹤產物。
+
+## 統計分析：有效紀錄與分布分母（2026-11-22）
+- 經使用者同意，只完成統計分析第一步，維持 `codex/rpi-voice-companion`。修改 `backend/database.py`、`frontend/index.html`、`frontend/css/style.css`、`frontend/js/app.js`、`frontend/js/charts.js`，新增 `tests/test_analytics.py`、`tests/test_analytics.cjs`，並追加本節。未修改即時頁、歷史、回放、狗狗互動、辨識模型、融合、擷取、寫入格式或資料庫 schema；沒有加入來源切換、重新訓練或刪除舊紀錄。
+- `/api/analytics` 保留 days 參數與既有回傳欄位，distribution 改為僅統計有效綜合紀錄。來源有效定義為「face_detected=1 且臉部類別為四類之一、數值分數在 (0,1]」，或「音訊類別為四類之一、數值分數在 (0,1]」；另外綜合結果也須有四類標籤與 (0,1] 數值分數。這是現有紀錄可支持的有效性判斷，不證明真的有人聲／模型判對，也不重新推論歷史資料。
+- 無有效來源（包含舊紀錄來源欄位不足）與有來源但綜合結果無效分開計數；兩者皆不進入情緒分布。低分數定義為有效綜合紀錄的分數 <0.5，是有效紀錄的子集合，仍納入分布與平均模型分數。50% 僅為顯示分類門檻，沿用原介面中低分數分界，不是新推論門檻或準確率校準；等於 50% 不屬於低分數。原始紀錄不刪除、不改寫。
+- SQL 在選取期間到現在的範圍內分類與聚合，不將所有逐筆資料載入前端；未來時間不計入。新增有效／排除／無來源／綜合無效／低分數筆數、固定分類門檻與實際最早／最晚紀錄。session_count 改為此期間實際有紀錄的不同 session 數，避免忽略在區間前開始但仍有新紀錄的 session。現有本地無時區時間格式保留，未實作跨時區遷移；舊資料缺少來源欄位時不能還原當時感測狀態。
+- 網頁改為「綜合辨識統計」：四項摘要、實際資料範圍、排除原因、分布分母，以及四類情緒筆數／紀錄占比／平均模型分數表格與圓環圖。強調分數不是準確率、紀錄占比不是情緒持續時間或心理評估。只在統計頁改用模型分數稱呼，其他頁文案保持原樣。中英與手機排版同步；Chart.js 圖例移到底部並停用動畫，避免窄畫面壓縮與切換過渡誤解。
+- 載入開始即清空舊統計與圖表；空資料、全部排除、請求失敗與舊後端缺少新欄位分別顯示狀態。遞增請求序號避免快速切期間／語言時舊回應覆蓋新結果。Chart.js CDN 未載入時仍顯示數值表格；沒有新增外部相依，既有 CDN 依賴未改成本機。時間範圍透過 textContent 顯示，不當 HTML 解析。
+- 驗證：Python unittest 共 35 項通過（新增 7），Node 即時／對話／統計共 36 項通過（新增 6）。涵蓋無訊號中性排除、來源與分數合法性、低分數保留及 0.5 邊界、僅音訊來源、空資料、期間／未來資料／session 範圍、API 格式與 days 驗證、查詢不改資料、舊圖清除、中英、請求競爭、錯誤恢復、缺圖表元件與文字安全。既有 httpx 棄用與缺字典模擬警告未改。
+- 真實瀏覽器：僅綁 `127.0.0.1:8012` 的獨立預覽後端，資料庫位於 Windows Temp `analytics-preview-2ab85eb06e1c4adeaaaee35904555a86/synthetic.db`，非 `data/emotion.db`。八筆合成資料經真實 POST／統計 API 得到總數 8、有效 5、低分數 2（有效子集）、排除 3；Playwright 使用現有 Edge headless 驗證 1440／375／320px、中英、canvas 非空、表格邊界、空期間及模擬全排除／500 後恢復，無 pageerror。檢視桌面與手機截圖；腳本與圖保留於既有被忽略的 `output/playwright/`，不應當作正式模型成效。未安裝套件；CLI 未安裝，改用 bundled Playwright library，未使用 @playwright/test。
+- 沒有開相機／麥克風、讀取或更動正式情緒資料、執行歷史清理、刪除任何檔案或操作 git add／commit／push。預覽服務留供使用者查看合成資料；樹莓派尚未驗收。部署時前後端需一起更新、重啟後端並強制重新整理網頁；辨識程式無需因本次更新重啟。歷史／回放依然沿用舊規則，和新統計的數量可能不同；模型／使用者未分組的舊紀錄不能解讀為單一人的長期心理狀態。

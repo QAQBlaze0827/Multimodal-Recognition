@@ -53,9 +53,10 @@ function createPieChart(canvasId, data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
             plugins: {
                 legend: {
-                    position: 'right',
+                    position: 'bottom',
                     labels: { color: '#e8eaed', padding: 12, font: { size: 12 } },
                 },
             },
