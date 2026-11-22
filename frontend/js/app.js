@@ -247,16 +247,14 @@ function applyLanguage() {
     if (fpsLabel) fpsLabel.textContent = 'FPS';
     if (tempLabel) tempLabel.textContent = tr('temperature');
     if (faceLabel) faceLabel.textContent = tr('faceDetected');
-    setText('#view-history .card > h2', 'historyTitle');
+    setText('#history-heading', 'historyTitle');
     setText('#analytics-heading', 'analyticsTitle');
     setText('#insight-face', 'waiting');
     setText('#insight-audio', 'waiting');
     setText('#insight-agreement', 'waiting');
     setText('#replay-load', 'load');
     setText('#replay-play', replayTimer ? 'pause' : 'play');
-    setText('#history-filter-btn', 'filter');
     setText('#history-refresh', 'refresh');
-    setText('#history-summary', 'historyPrompt');
     setText('#analytics-insight', 'analyticsPrompt');
 
     const staticLabels = [
@@ -269,7 +267,7 @@ function applyLanguage() {
     if (!lastLiveData) staticLabels.forEach(([selector, key]) => setText(selector, key));
 
     updateStaticFormLabels();
-    updateTableHeaders();
+    if (typeof updateHistoryLanguage === 'function') updateHistoryLanguage();
     updateReplayStaticLabels();
     updateStatusLanguage();
     if (lastLiveData) updateLiveView(lastLiveData, false);
@@ -287,15 +285,6 @@ function applyLanguage() {
 }
 
 function updateStaticFormLabels() {
-    const emotionSelect = document.getElementById('filter-emotion');
-    if (emotionSelect) {
-        const labels = ['', 'neutral', 'happy', 'sad', 'anger'];
-        [...emotionSelect.options].forEach((option, index) => {
-            option.textContent = index === 0 ? tr('allEmotions') : formatEmotion(labels[index]);
-        });
-    }
-    const filterSession = document.getElementById('filter-session');
-    if (filterSession && filterSession.options.length) filterSession.options[0].textContent = tr('allSessions');
     const replaySession = document.getElementById('replay-session');
     if (replaySession && replaySession.options.length && !replaySession.value) {
         replaySession.options[0].textContent = tr('loadingSessions');
@@ -309,14 +298,6 @@ function updateStaticFormLabels() {
             option.textContent = tr(keys[index]);
         });
     }
-}
-
-function updateTableHeaders() {
-    const headers = document.querySelectorAll('#history-table th');
-    const keys = ['timestamp', 'emotion', 'confidence', 'videoAudio', 'FPS'];
-    headers.forEach((th, index) => {
-        th.textContent = keys[index] === 'FPS' ? 'FPS' : tr(keys[index]);
-    });
 }
 
 function updateReplayStaticLabels() {
@@ -680,25 +661,6 @@ function updateTrendSummary() {
     }
 }
 
-function summarizeLogs(logs) {
-    if (!logs.length) return null;
-    const counts = {};
-    let confidenceTotal = 0;
-    let faceCount = 0;
-    logs.forEach(log => {
-        counts[log.fused_emotion] = (counts[log.fused_emotion] || 0) + 1;
-        confidenceTotal += Number(log.fused_conf || 0);
-        if (log.face_detected) faceCount += 1;
-    });
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    return {
-        topEmotion: top ? top[0] : '',
-        topCount: top ? top[1] : 0,
-        total: logs.length,
-        avgConfidence: confidenceTotal / logs.length,
-        faceRate: faceCount / logs.length,
-    };
-}
 
 function distributionTop(distribution) {
     const entries = Object.entries(distribution || {});
@@ -748,60 +710,6 @@ function renderBars(containerId, scores, highlightEmotion) {
     `).join('');
 }
 
-function initHistoryView() {
-    document.getElementById('history-filter-btn').addEventListener('click', loadHistory);
-    document.getElementById('history-refresh').addEventListener('click', loadHistory);
-}
-
-async function loadHistory() {
-    const emotion = document.getElementById('filter-emotion').value;
-    const session = document.getElementById('filter-session').value;
-
-    try {
-        const logs = await getLogs({ emotion, session_id: session, limit: 500 });
-        const tbody = document.querySelector('#history-table tbody');
-        if (!tbody) return;
-
-        if (logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5">${currentLang === 'zh' ? '目前沒有符合條件的紀錄。' : 'No records match the current filter.'}</td></tr>`;
-            document.getElementById('history-summary').textContent =
-                currentLang === 'zh' ? '目前沒有符合篩選條件的紀錄。' : 'No records match the current filter.';
-            return;
-        }
-
-        const summary = summarizeLogs(logs);
-        if (summary) {
-            document.getElementById('history-summary').textContent = currentLang === 'zh'
-                ? `共 ${summary.total} 筆紀錄，最常出現「${formatEmotion(summary.topEmotion)}」（${Math.round(summary.topCount / summary.total * 100)}%）。平均可信度 ${Math.round(summary.avgConfidence * 100)}%，臉部偵測成功率 ${Math.round(summary.faceRate * 100)}%。`
-                : `${summary.total} records. Most common emotion is ${formatEmotion(summary.topEmotion)} (${Math.round(summary.topCount / summary.total * 100)}%). Average confidence is ${Math.round(summary.avgConfidence * 100)}%. Face was detected in ${Math.round(summary.faceRate * 100)}% of records.`;
-        }
-
-        tbody.innerHTML = logs.map(log => `
-            <tr>
-                <td>${log.timestamp || '-'}</td>
-                <td><span class="emotion-badge"><span class="dot" style="background: ${EMOTION_COLORS[log.fused_emotion] || '#666'};"></span>${formatEmotion(log.fused_emotion)}</span></td>
-                <td>${(log.fused_conf * 100).toFixed(0)}%</td>
-                <td>${formatEmotion(log.video_emotion) || '-'} / ${formatEmotion(log.audio_emotion) || '-'}</td>
-                <td>${log.fps ? log.fps.toFixed(1) : '-'}</td>
-            </tr>
-        `).join('');
-
-        await populateSessionFilter();
-    } catch (e) {
-        console.error('History load error:', e);
-    }
-}
-
-async function populateSessionFilter() {
-    try {
-        const sessions = await getSessions();
-        const select = document.getElementById('filter-session');
-        const current = select.value;
-        select.innerHTML = '<option value="">全部 Session</option>' +
-            sessions.map(s => `<option value="${s.id}">${s.id} (${s.log_count || 0} logs)</option>`).join('');
-        select.value = current;
-    } catch (e) { /* ignore */ }
-}
 
 function initAnalyticsView() {
     document.getElementById('analytics-days').addEventListener('change', loadAnalytics);

@@ -197,31 +197,29 @@
 
 <!-- ==================== HISTORY VIEW ==================== -->
 <section id="view-history" class="view">
-    <div class="card">
-        <h2>辨識歷史</h2>
+    <div class="history-content">
+        <h2 id="history-heading">辨識歷史</h2>
         <div class="filter-bar">
-            <select id="filter-emotion">
-                <option value="">全部情緒</option>
-                <option value="neutral">中性</option>
-                <option value="happy">開心</option>
-                <option value="sad">悲傷</option>
-                <option value="anger">生氣</option>
-            </select>
-            <select id="filter-session">
-                <option value="">全部 Session</option>
-            </select>
-            <button id="history-filter-btn">篩選</button>
+            <label><span id="history-period-label">期間：</span><select id="history-days">
+                <option value="7">最近 7 天</option>
+                <option value="30" selected>最近 30 天</option>
+                <option value="90">最近 90 天</option>
+                <option value="365">最近一年</option>
+            </select></label>
             <button id="history-refresh">重新整理</button>
         </div>
-        <div id="history-summary" class="summary-line">選擇篩選條件或重新整理，即可查看最近紀錄摘要。</div>
-        <div class="table-wrap" id="history-table">
-            <table>
-                <thead><tr>
-                    <th>時間</th><th>情緒</th><th>可信度</th><th>視覺/音訊</th><th>FPS</th>
-                </tr></thead>
-                <tbody><tr><td colspan="5">載入中...</td></tr></tbody>
-            </table>
-        </div>
+        <p id="history-disclaimer" class="summary-line"></p>
+        <p id="history-status" role="status" aria-live="polite"></p>
+        <div id="history-sessions"></div>
+        <div id="history-pagination" class="history-pagination"></div>
+        <section id="history-detail" hidden aria-labelledby="history-detail-title">
+            <h3 id="history-detail-title" tabindex="-1"></h3>
+            <p id="history-detail-status" role="status" aria-live="polite"></p>
+            <div class="table-wrap"><table id="history-records">
+                <thead><tr id="history-record-head"></tr></thead><tbody></tbody>
+            </table></div>
+            <div id="history-record-pagination" class="history-pagination"></div>
+        </section>
     </div>
 </section>
 
@@ -261,6 +259,7 @@
 <script src="js/api.js"></script>
 <script src="js/websocket.js"></script>
 <script src="js/charts.js"></script>
+<script src="js/history.js"></script>
 <script src="js/app.js"></script>
 <script src="vendor/opencc-js-1.4.2/cn2t.js"></script>
 <script src="js/companion.js"></script>

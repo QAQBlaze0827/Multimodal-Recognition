@@ -10,6 +10,19 @@ from typing import Any
 
 _local = threading.local()
 
+_QUALITY_SQL = """CASE
+    WHEN NOT (
+        COALESCE(face_detected = 1 AND video_emotion IN ('neutral','happy','sad','anger')
+            AND typeof(video_conf) IN ('real','integer') AND video_conf > 0 AND video_conf <= 1, 0)
+        OR COALESCE(audio_emotion IN ('neutral','happy','sad','anger')
+            AND typeof(audio_conf) IN ('real','integer') AND audio_conf > 0 AND audio_conf <= 1, 0)
+    ) THEN 'no_source'
+    WHEN fused_emotion IN ('neutral','happy','sad','anger')
+        AND typeof(fused_conf) IN ('real','integer') AND fused_conf > 0 AND fused_conf <= 1
+        THEN 'valid'
+    ELSE 'unresolved'
+END"""
+
 
 def _get_conn(db_path: str) -> sqlite3.Connection:
     if not hasattr(_local, "conn") or _local.conn is None:
@@ -223,19 +236,8 @@ def get_analytics_summary(db_path: str, days: int = 30) -> dict[str, Any]:
     # This is a display grouping, not an inference threshold or an accuracy claim.
     low_score_threshold = 0.5
     rows = conn.execute(
-        """WITH classified AS (
-            SELECT *, CASE
-                WHEN NOT (
-                    COALESCE(face_detected = 1 AND video_emotion IN ('neutral','happy','sad','anger')
-                        AND typeof(video_conf) IN ('real','integer') AND video_conf > 0 AND video_conf <= 1, 0)
-                    OR COALESCE(audio_emotion IN ('neutral','happy','sad','anger')
-                        AND typeof(audio_conf) IN ('real','integer') AND audio_conf > 0 AND audio_conf <= 1, 0)
-                ) THEN 'no_source'
-                WHEN fused_emotion IN ('neutral','happy','sad','anger')
-                    AND typeof(fused_conf) IN ('real','integer') AND fused_conf > 0 AND fused_conf <= 1
-                    THEN 'valid'
-                ELSE 'unresolved'
-            END AS quality
+        f"""WITH classified AS (
+            SELECT *, {_QUALITY_SQL} AS quality
             FROM emotion_logs WHERE timestamp >= ? AND timestamp <= ?
         )
         SELECT quality, CASE WHEN quality = 'valid' THEN fused_emotion END AS emotion,
@@ -271,6 +273,52 @@ def get_analytics_summary(db_path: str, days: int = 30) -> dict[str, Any]:
         "last_record": max((r["last_record"] for r in rows), default=None),
         "distribution": distribution,
     }
+
+
+def get_history_sessions(db_path: str, days: int = 30, limit: int = 10,
+                         offset: int = 0) -> dict[str, Any]:
+    conn = _get_conn(db_path)
+    now = datetime.now()
+    params = ((now - timedelta(days=days)).isoformat(), now.isoformat())
+    cte = f"""WITH classified AS (
+        SELECT *, {_QUALITY_SQL} AS quality FROM emotion_logs
+        WHERE timestamp >= ? AND timestamp <= ?
+    ) """
+    total = conn.execute(cte + "SELECT COUNT(DISTINCT session_id) FROM classified", params).fetchone()[0]
+    counts = ", ".join(
+        f"SUM(CASE WHEN quality = 'valid' AND fused_emotion = '{emotion}' THEN 1 ELSE 0 END) AS {emotion}"
+        for emotion in ('neutral', 'happy', 'sad', 'anger')
+    )
+    rows = conn.execute(cte + f"""SELECT session_id,
+        MIN(timestamp) AS first_record, MAX(timestamp) AS last_record,
+        COUNT(*) AS total_logs, SUM(quality = 'valid') AS valid_logs,
+        SUM(quality = 'no_source') AS no_source_logs,
+        SUM(quality = 'unresolved') AS unresolved_logs,
+        SUM(quality = 'valid' AND fused_conf < 0.5) AS low_score_logs, {counts}
+        FROM classified GROUP BY session_id
+        ORDER BY last_record DESC, session_id LIMIT ? OFFSET ?""", (*params, limit, offset)).fetchall()
+    items = []
+    for row in rows:
+        item = dict(row)
+        item['distribution'] = {key: item.pop(key) for key in ('neutral', 'happy', 'sad', 'anger')}
+        items.append(item)
+    return {'total': total, 'items': items}
+
+
+def get_history_records(db_path: str, session_id: str, days: int = 30,
+                        limit: int = 20, offset: int = 0) -> dict[str, Any]:
+    conn = _get_conn(db_path)
+    now = datetime.now()
+    params = (session_id, (now - timedelta(days=days)).isoformat(), now.isoformat())
+    where = "WHERE session_id = ? AND timestamp >= ? AND timestamp <= ?"
+    total = conn.execute(f"SELECT COUNT(*) FROM emotion_logs {where}", params).fetchone()[0]
+    rows = conn.execute(f"""WITH classified AS (
+        SELECT *, {_QUALITY_SQL} AS quality FROM emotion_logs {where}
+        ) SELECT id, timestamp, quality,
+        CASE WHEN quality = 'valid' THEN fused_emotion END AS fused_emotion,
+        CASE WHEN quality = 'valid' THEN fused_conf END AS fused_conf FROM classified
+        ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?""", (*params, limit, offset)).fetchall()
+    return {'total': total, 'items': [dict(row) for row in rows]}
 
 
 def cleanup_old_sessions(db_path: str, retain_days: int = 30) -> int:

@@ -27,6 +27,8 @@ from backend.database import (
     get_all_sessions,
     get_analytics_summary,
     get_emotion_timeline,
+    get_history_sessions,
+    get_history_records,
     get_latest_log_id,
     get_logs_after_id,
     get_recent_logs,
@@ -150,6 +152,21 @@ async def analytics(days: int = Query(30, ge=1, le=365)) -> dict[str, Any]:
 async def cleanup(days: int = Query(30, ge=1)) -> dict[str, Any]:
     deleted = cleanup_old_sessions(DB_PATH, days)
     return {"deleted": deleted}
+
+
+@app.get("/api/history/sessions")
+async def history_sessions(days: int = Query(30, ge=1, le=365),
+                           limit: int = Query(10, ge=1, le=100),
+                           offset: int = Query(0, ge=0)) -> dict[str, Any]:
+    return get_history_sessions(DB_PATH, days, limit, offset)
+
+
+@app.get("/api/history/records")
+async def history_records(session_id: str = Query(..., min_length=1),
+                          days: int = Query(30, ge=1, le=365),
+                          limit: int = Query(20, ge=1, le=100),
+                          offset: int = Query(0, ge=0)) -> dict[str, Any]:
+    return get_history_records(DB_PATH, session_id, days, limit, offset)
 
 
 @app.websocket("/ws")

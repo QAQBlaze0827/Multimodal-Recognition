@@ -561,3 +561,28 @@ select, input {
     .grid-3 { grid-template-columns: 1fr 1fr; }
     .grid-4 { grid-template-columns: 1fr 1fr; }
 }
+/* Session summaries remain unframed; only records use a table. */
+.history-content { padding: .5rem 0; }
+.history-content button { font: inherit; font-size: .875rem; color: var(--text-primary); background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: .55rem .85rem; cursor: pointer; }
+.history-content button:hover:not(:disabled), .history-content button:focus-visible { border-color: var(--accent-light); }
+.history-content .filter-bar { justify-content: flex-start; align-items: flex-end; margin-top: .75rem; }
+.history-content .filter-bar label { display: flex; align-items: center; gap: .5rem; }
+.history-session { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid var(--border); align-items: center; }
+.history-session h3 { font-size: 1rem; margin: 0; }
+.history-session p { margin: .5rem 0; overflow-wrap: anywhere; }
+.history-top { font-weight: 600; }
+.history-pagination { display: flex; align-items: center; gap: .75rem; margin: 1rem 0; }
+.history-pagination button { width: 2.5rem; height: 2.5rem; padding: 0; }
+.history-pagination button:disabled { opacity: .35; cursor: default; }
+#history-detail { margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+#history-detail[hidden] { display: none; }
+#history-detail-title { font-size: 1.1rem; overflow-wrap: anywhere; }
+#history-records { table-layout: fixed; width: 100%; }
+#history-records th, #history-records td { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .history-content .filter-bar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .history-content .filter-bar select { width: auto; }
+    .history-session { grid-template-columns: minmax(0, 1fr); }
+    .history-session > button { justify-self: start; }
+    #history-records th, #history-records td { padding: .5rem .3rem; font-size: .8rem; }
+}
