@@ -3,6 +3,11 @@ let replayData = [];
 let replayIndex = 0;
 let replayTimer = null;
 let replaySpeed = 1;
+let replayRequestId = 0;
+let replaySessionsRequestId = 0;
+let replaySessions = [];
+let replayState = 'idle';
+let replayUsableCount = 0;
 let analyticsRequestId = 0;
 let liveTrend = [];
 let lastLiveData = null;
@@ -253,7 +258,6 @@ function applyLanguage() {
     setText('#insight-audio', 'waiting');
     setText('#insight-agreement', 'waiting');
     setText('#replay-load', 'load');
-    setText('#replay-play', replayTimer ? 'pause' : 'play');
     setText('#history-refresh', 'refresh');
     setText('#analytics-insight', 'analyticsPrompt');
 
@@ -276,10 +280,6 @@ function applyLanguage() {
     if (currentView === 'history') loadHistory();
     if (currentView === 'analytics') loadAnalytics();
     if (replayData.length) {
-        if (replayChart) {
-            replayChart.destroy();
-            replayChart = null;
-        }
         seekReplay(replayIndex);
     }
 }
@@ -301,11 +301,18 @@ function updateStaticFormLabels() {
 }
 
 function updateReplayStaticLabels() {
-    setText('#view-replay .card:nth-child(1) h2', 'sessionReplay');
-    setText('#view-replay .card:nth-child(3) h2', 'frameScores');
-    const speedLabel = document.querySelector('.replay-controls label');
-    if (speedLabel && speedLabel.firstChild) speedLabel.firstChild.textContent = tr('speed');
-    if (!replayData.length) setText('#replay-insight', 'replayInsight');
+    replaySet('replay-heading', replayText('辨識紀錄回放', 'Recognition record replay'));
+    replaySet('replay-notice', replayText('這是辨識結果紀錄，沒有錄影或錄音。逐筆播放不代表原始時間速度；模型分數不是準確率。', 'Recognition records only, not recorded video or audio. Playback advances by record, not original timing; model scores are not accuracy.'));
+    replaySet('replay-session-label', replayText('使用紀錄', 'Session'));
+    replaySet('replay-speed-label', replayText('每秒筆數：', 'Records / second: '));
+    replaySet('replay-result-label', replayText('綜合判讀', 'Combined result'));
+    replaySet('replay-video-label', replayText('臉部表情', 'Facial expression'));
+    replaySet('replay-audio-label', replayText('語音情緒', 'Voice emotion'));
+    const slider = document.getElementById('replay-timeline');
+    if (slider) slider.setAttribute('aria-label', replayText('辨識紀錄位置', 'Record position'));
+    updateReplayControls();
+    renderReplayState();
+    if (replaySessions.length) renderReplaySessions();
 }
 
 function updateStatusLanguage() {
@@ -328,6 +335,7 @@ function initNav() {
 }
 
 function switchView(view) {
+    if (view !== 'replay') pauseReplay();
     resetCompanion();
     currentView = view;
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -793,109 +801,186 @@ function renderAnalytics(data) {
     }
 }
 
-function initReplayView() {
-    document.getElementById('replay-load').addEventListener('click', startReplay);
-    document.getElementById('replay-play').addEventListener('click', toggleReplayPlay);
-    document.getElementById('replay-speed').addEventListener('change', (e) => {
-        replaySpeed = parseFloat(e.target.value);
-    });
-    document.getElementById('replay-timeline').addEventListener('input', (e) => {
-        if (replayData.length === 0) return;
-        const idx = parseInt(e.target.value);
-        seekReplay(idx);
-    });
+function replayText(zh, en) { return currentLang === 'zh' ? zh : en; }
+function replaySet(id, text) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = text;
 }
-
+function replayTime(timestamp) {
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString(currentLang === 'zh' ? 'zh-TW' : 'en-GB', { hour12: false });
+}
+function updateReplayControls() {
+    const labels = {
+        'replay-refresh': replayText('重新整理使用紀錄', 'Refresh sessions'),
+        'replay-play': replayTimer ? tr('pause') : tr('play'),
+        'replay-previous': replayText('上一筆', 'Previous record'),
+        'replay-next': replayText('下一筆', 'Next record'),
+    };
+    Object.entries(labels).forEach(([id, label]) => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.title = label;
+        button.setAttribute('aria-label', label);
+    });
+    replaySet('replay-play', replayTimer ? '\u275a\u275a' : '\u25b6');
+    const count = replayData.length;
+    document.getElementById('replay-play').disabled = count < 2;
+    document.getElementById('replay-previous').disabled = !count || replayIndex === 0;
+    document.getElementById('replay-next').disabled = !count || replayIndex >= count - 1;
+    document.getElementById('replay-timeline').disabled = count < 2;
+}
+function renderReplayState() {
+    const states = {
+        idle: replayText('尚未載入紀錄', 'No session loaded'),
+        loading: tr('loading'),
+        empty: replayText('這次使用沒有可回放的紀錄。', 'No records to replay in this session.'),
+        error: replayText('載入失敗，請確認後端已更新後重試。', 'Unable to load. Check the backend version and retry.'),
+        ready: replayTimer ? replayText('逐筆播放中', 'Playing records') : replayText('已暫停', 'Paused'),
+        ended: replayText('已到最後一筆', 'End of records'),
+    };
+    replaySet('replay-status', states[replayState]);
+}
+function pauseReplay() {
+    if (replayTimer !== null) clearInterval(replayTimer);
+    replayTimer = null;
+    updateReplayControls();
+    renderReplayState();
+}
+function clearReplay(state = 'idle') {
+    ++replayRequestId;
+    replayData = [];
+    replayUsableCount = 0;
+    replayIndex = 0;
+    replayState = state;
+    pauseReplay();
+    ['replay-emotion', 'replay-conf', 'replay-video', 'replay-audio'].forEach(id => replaySet(id, '--'));
+    ['replay-ts', 'replay-gap', 'replay-insight', 'replay-summary'].forEach(id => replaySet(id, ''));
+    replaySet('replay-current-idx', '0 / 0');
+    const slider = document.getElementById('replay-timeline');
+    slider.max = 0;
+    slider.value = 0;
+    slider.removeAttribute('aria-valuetext');
+}
+function initReplayView() {
+    document.getElementById('replay-refresh').addEventListener('click', loadReplaySessions);
+    document.getElementById('replay-load').addEventListener('click', startReplay);
+    document.getElementById('replay-session').addEventListener('change', () => clearReplay());
+    document.getElementById('replay-play').addEventListener('click', toggleReplayPlay);
+    document.getElementById('replay-previous').addEventListener('click', () => { pauseReplay(); seekReplay(replayIndex - 1); });
+    document.getElementById('replay-next').addEventListener('click', () => { pauseReplay(); seekReplay(replayIndex + 1); });
+    document.getElementById('replay-speed').addEventListener('change', e => {
+        replaySpeed = Number(e.target.value);
+        if (replayTimer) { pauseReplay(); toggleReplayPlay(); }
+    });
+    document.getElementById('replay-timeline').addEventListener('input', e => {
+        pauseReplay();
+        seekReplay(Number(e.target.value));
+    });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pauseReplay(); });
+}
+function renderReplaySessions() {
+    const select = document.getElementById('replay-session');
+    const current = select.value;
+    select.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = replayText('選擇一次使用紀錄', 'Select a session');
+    select.append(placeholder);
+    replaySessions.forEach(session => {
+        const option = document.createElement('option');
+        option.value = session.id;
+        option.textContent = replayTime(session.start_time) + replayText(' · ' + session.log_count + ' 筆', ' · ' + session.log_count + ' records');
+        select.append(option);
+    });
+    select.value = replaySessions.some(session => session.id === current) ? current : '';
+}
 async function loadReplaySessions() {
+    const request = ++replaySessionsRequestId;
+    const button = document.getElementById('replay-load');
+    button.disabled = true;
     try {
         const sessions = await getSessions();
-        const select = document.getElementById('replay-session');
-        select.innerHTML = sessions.map(s =>
-            `<option value="${s.id}">${s.id} (${s.log_count || 0} logs)</option>`
-        ).join('');
-    } catch (e) {
-        console.error('Replay sessions load error:', e);
+        if (request !== replaySessionsRequestId) return;
+        replaySessions = sessions.filter(session => session.log_count > 0);
+        const current = document.getElementById('replay-session').value;
+        if (current && !replaySessions.some(session => session.id === current)) clearReplay();
+        renderReplaySessions();
+        button.disabled = !replaySessions.length;
+        if (!replaySessions.length) { clearReplay('empty'); }
+        else if (!replayData.length) { replayState = 'idle'; renderReplayState(); }
+    } catch (error) {
+        if (request !== replaySessionsRequestId) return;
+        replaySessions = [];
+        renderReplaySessions();
+        clearReplay('error');
     }
 }
-
 async function startReplay() {
     const sessionId = document.getElementById('replay-session').value;
     if (!sessionId) return;
-
+    clearReplay('loading');
+    const request = replayRequestId;
     try {
-        replayData = await getSessionTimeline(sessionId);
-        if (replayData.length === 0) {
-            document.getElementById('replay-status').textContent =
-                currentLang === 'zh' ? '這個 session 沒有資料。' : 'No data for this session.';
-            return;
+        const data = await getSessionTimeline(sessionId);
+        if (request !== replayRequestId) return;
+        if (!Array.isArray(data) || data.some(row => !['valid', 'no_source', 'unresolved'].includes(row.quality))) {
+            throw new Error('Replay requires updated backend');
         }
-        replayIndex = 0;
-        const slider = document.getElementById('replay-timeline');
-        slider.max = replayData.length - 1;
-        slider.value = 0;
-        document.getElementById('replay-play').disabled = false;
-        document.getElementById('replay-play').textContent = '播放';
-        seekReplay(0);
-        if (replayChart) {
-            const firstScores = readScores(replayData[0], 'video');
-            updateReplayChart(firstScores, replayData[0].fused_emotion);
-        }
-    } catch (e) {
-        console.error('Replay start error:', e);
+        replayData = data;
+        replayUsableCount = data.filter(row => row.quality === 'valid').length;
+        replayState = data.length ? 'ready' : 'empty';
+        document.getElementById('replay-timeline').max = Math.max(0, data.length - 1);
+        if (data.length) seekReplay(0);
+        else { updateReplayControls(); renderReplayState(); }
+    } catch (error) {
+        if (request === replayRequestId) clearReplay('error');
     }
 }
-
 function toggleReplayPlay() {
-    const btn = document.getElementById('replay-play');
-    if (replayTimer) {
-        clearInterval(replayTimer);
-        replayTimer = null;
-        btn.textContent = '播放';
-    } else {
-        btn.textContent = '暫停';
-        const interval = Math.max(50, Math.floor(1000 / replaySpeed));
-        replayTimer = setInterval(() => {
-            if (replayIndex < replayData.length - 1) {
-                replayIndex++;
-                seekReplay(replayIndex);
-                document.getElementById('replay-timeline').value = replayIndex;
-            } else {
-                clearInterval(replayTimer);
-                replayTimer = null;
-                document.getElementById('replay-play').textContent = '播放';
-            }
-        }, interval);
-    }
+    if (replayTimer) { pauseReplay(); return; }
+    if (replayData.length < 2) return;
+    if (replayIndex >= replayData.length - 1) seekReplay(0);
+    replayState = 'ready';
+    replayTimer = setInterval(() => {
+        seekReplay(replayIndex + 1);
+        if (replayIndex >= replayData.length - 1) {
+            replayState = 'ended';
+            pauseReplay();
+        }
+    }, Math.max(100, 1000 / replaySpeed));
+    updateReplayControls();
+    renderReplayState();
 }
-
 function seekReplay(idx) {
-    if (idx < 0 || idx >= replayData.length) return;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= replayData.length) return;
     replayIndex = idx;
-    const d = replayData[idx];
-    document.getElementById('replay-current-idx').textContent = `${idx + 1} / ${replayData.length}`;
-    document.getElementById('replay-ts').textContent = d.timestamp || '';
-    document.getElementById('replay-emotion').textContent = formatEmotion(d.fused_emotion);
-    document.getElementById('replay-emotion').style.color = EMOTION_COLORS[d.fused_emotion] || '#e8eaed';
-    document.getElementById('replay-conf').textContent = `${(d.fused_conf * 100).toFixed(0)}%`;
-    document.getElementById('replay-insight').textContent = currentLang === 'zh'
-        ? `此刻判斷為「${formatEmotion(d.fused_emotion)}」，可信度為${confidenceLevel(Number(d.fused_conf || 0))}。`
-        : `${formatEmotion(d.fused_emotion)} at ${confidenceLevel(Number(d.fused_conf || 0)).toLowerCase()}.`;
+    replayState = idx === replayData.length - 1 ? 'ended' : 'ready';
+    const row = replayData[idx];
+    const valid = row.quality === 'valid';
+    const count = replayUsableCount;
+    replaySet('replay-summary', replayText('本次共 ' + replayData.length + ' 筆，可參考 ' + count + ' 筆；其餘不計入情緒分布。', replayData.length + ' records, ' + count + ' usable; others excluded from emotion distributions.'));
+    replaySet('replay-current-idx', replayText('第 ' + (idx + 1) + ' / ' + replayData.length + ' 筆', 'Record ' + (idx + 1) + ' / ' + replayData.length));
+    replaySet('replay-ts', replayText('紀錄時間：', 'Recorded at: ') + replayTime(row.timestamp));
+    const gap = idx ? (new Date(row.timestamp) - new Date(replayData[idx - 1].timestamp)) / 1000 : 0;
+    replaySet('replay-gap', gap > 5 ? replayText('與上一筆相隔 ' + gap.toFixed(1) + ' 秒；中間沒有紀錄，不推估情緒。', gap.toFixed(1) + ' seconds since the previous record; no emotion is inferred for the gap.') : '');
+    replaySet('replay-emotion', valid ? formatEmotion(row.fused_emotion) : '--');
+    document.getElementById('replay-emotion').style.color = valid ? EMOTION_COLORS[row.fused_emotion] : '#9aa0a6';
+    replaySet('replay-conf', valid ? replayText('模型分數 ', 'Model score ') + Math.round(row.fused_conf * 100) + '%' : '--');
+    replaySet('replay-insight', row.quality === 'no_source'
+        ? replayText('無有效訊號；不作情緒判讀。', 'No valid signal; no emotion assigned.')
+        : !valid ? replayText('有來源紀錄，但綜合結果無效。', 'Source data exists, but the combined result is invalid.')
+        : row.fused_conf < 0.5 ? replayText('模型分數偏低，這筆結果需謹慎參考。', 'Low model score; interpret this result cautiously.')
+        : replayText('有有效來源支持的模型結果，不代表使用者真實心情。', 'A model result with a valid source, not proof of the person’s feelings.'));
+    ['video', 'audio'].forEach(source => {
+        const emotion = row[source + '_emotion'];
+        const score = row[source + '_conf'];
+        const usable = ['neutral', 'happy', 'sad', 'anger'].includes(emotion) && Number.isFinite(score) && score > 0 && score <= 1;
+        replaySet('replay-' + source, usable ? formatEmotion(emotion) + replayText(' · 模型分數 ', ' · Model score ') + Math.round(score * 100) + '%' : replayText('無有效來源', 'No valid source'));
+    });
     const slider = document.getElementById('replay-timeline');
-    if (slider) slider.value = idx;
-
-    const scores = readScores(d, 'video');
-    updateReplayChart(scores, d.fused_emotion);
-}
-
-function updateReplayChart(scores, highlight) {
-    if (!replayChart) {
-        replayChart = createReplayChart('replay-chart');
-        if (!replayChart) return;
-    }
-    const allEmotions = ['neutral', 'happy', 'sad', 'anger'];
-    replayChart.data.datasets[0].data = allEmotions.map(e => scores[e] || 0);
-    replayChart.data.datasets[0].backgroundColor = allEmotions.map(e =>
-        e === highlight ? (EMOTION_COLORS[e] || '#666') : '#333'
-    );
-    replayChart.update();
+    slider.value = idx;
+    slider.setAttribute('aria-valuetext', (idx + 1) + ' / ' + replayData.length + ', ' + replayTime(row.timestamp));
+    updateReplayControls();
+    renderReplayState();
 }

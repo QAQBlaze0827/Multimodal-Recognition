@@ -531,6 +531,18 @@ select, input {
     padding: 1rem;
 }
 
+.replay-section { padding: 1rem 0; border-bottom: 1px solid var(--border); }
+.replay-section h2 { font-size: 1.3rem; }
+.replay-section h3 { font-size: .95rem; color: var(--text-secondary); margin-bottom: .5rem; }
+.replay-section p { overflow-wrap: anywhere; }
+.replay-section .session-select { display: block; max-width: 100%; margin-top: .5rem; }
+.replay-section #replay-load, .replay-section #replay-refresh { padding: .5rem 1rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.replay-controls button { width: 2.5rem; height: 2.5rem; padding: 0; }
+.replay-current { text-align: left; padding: 1rem 0; min-height: 150px; }
+.replay-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+#replay-gap { color: var(--warning); }
+@media (max-width: 480px) { .replay-sources { grid-template-columns: 1fr; } }
+
 #rpi-warning {
     display: none;
     background: var(--warning);

@@ -22,7 +22,6 @@ const EMOTION_LABELS = {
 
 let pieChart = null;
 let timelineChart = null;
-let replayChart = null;
 
 function chartLanguage() {
     return window.APP_LANG === 'en' ? 'en' : 'zh';
@@ -108,38 +107,4 @@ function createTimelineChart(canvasId, timelineData) {
         },
     });
     return timelineChart;
-}
-
-function createReplayChart(canvasId) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return null;
-    if (replayChart) replayChart.destroy();
-    const emotions = ['neutral', 'happy', 'sad', 'anger'];
-    replayChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: emotions.map(chartEmotionLabel),
-            datasets: [{
-                label: chartLanguage() === 'zh' ? '可信度' : 'Confidence',
-                data: [0, 0, 0, 0],
-                backgroundColor: emotions.map(emotion => EMOTION_COLORS[emotion]),
-                borderColor: '#1a1d27',
-                borderWidth: 1,
-            }],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: false,
-            indexAxis: 'y',
-            scales: {
-                x: { min: 0, max: 1, ticks: { color: '#9aa0a6', font: { size: 10 } }, grid: { color: '#2d3148' } },
-                y: { ticks: { color: '#e8eaed', font: { size: 11 } }, grid: { display: false } },
-            },
-            plugins: {
-                legend: { display: false },
-            },
-        },
-    });
-    return replayChart;
 }

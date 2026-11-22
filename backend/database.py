@@ -10,12 +10,13 @@ from typing import Any
 
 _local = threading.local()
 
-_QUALITY_SQL = """CASE
+_VIDEO_VALID_SQL = """COALESCE(face_detected = 1 AND video_emotion IN ('neutral','happy','sad','anger')
+    AND typeof(video_conf) IN ('real','integer') AND video_conf > 0 AND video_conf <= 1, 0)"""
+_AUDIO_VALID_SQL = """COALESCE(audio_emotion IN ('neutral','happy','sad','anger')
+    AND typeof(audio_conf) IN ('real','integer') AND audio_conf > 0 AND audio_conf <= 1, 0)"""
+_QUALITY_SQL = f"""CASE
     WHEN NOT (
-        COALESCE(face_detected = 1 AND video_emotion IN ('neutral','happy','sad','anger')
-            AND typeof(video_conf) IN ('real','integer') AND video_conf > 0 AND video_conf <= 1, 0)
-        OR COALESCE(audio_emotion IN ('neutral','happy','sad','anger')
-            AND typeof(audio_conf) IN ('real','integer') AND audio_conf > 0 AND audio_conf <= 1, 0)
+        {_VIDEO_VALID_SQL} OR {_AUDIO_VALID_SQL}
     ) THEN 'no_source'
     WHEN fused_emotion IN ('neutral','happy','sad','anger')
         AND typeof(fused_conf) IN ('real','integer') AND fused_conf > 0 AND fused_conf <= 1
@@ -220,11 +221,20 @@ def get_session_stats(db_path: str, session_id: str) -> dict[str, Any]:
 def get_emotion_timeline(db_path: str, session_id: str) -> list[dict[str, Any]]:
     conn = _get_conn(db_path)
     rows = conn.execute(
-        """SELECT timestamp, fused_emotion, fused_conf, video_scores_json, audio_scores_json
-           FROM emotion_logs
-           WHERE session_id = ?
-           ORDER BY timestamp ASC""",
-        (session_id,),
+        f"""WITH classified AS (
+            SELECT *, {_QUALITY_SQL} AS quality,
+                {_VIDEO_VALID_SQL} AS video_valid, {_AUDIO_VALID_SQL} AS audio_valid
+            FROM emotion_logs WHERE session_id = ? AND timestamp <= ?
+        ) SELECT id, timestamp, quality,
+            CASE WHEN quality = 'valid' THEN fused_emotion END AS fused_emotion,
+            CASE WHEN quality = 'valid' THEN fused_conf END AS fused_conf,
+            CASE WHEN video_valid THEN video_emotion END AS video_emotion,
+            CASE WHEN video_valid THEN video_conf END AS video_conf,
+            CASE WHEN audio_valid THEN audio_emotion END AS audio_emotion,
+            CASE WHEN audio_valid THEN audio_conf END AS audio_conf,
+            video_scores_json, audio_scores_json
+        FROM classified ORDER BY timestamp ASC, id ASC""",
+        (session_id, datetime.now().isoformat()),
     ).fetchall()
     return [dict(r) for r in rows]
 

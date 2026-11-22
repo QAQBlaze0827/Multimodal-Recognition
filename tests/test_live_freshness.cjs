@@ -13,6 +13,7 @@ function dashboard() {
             elements.set(key, {
                 textContent: '', innerHTML: '', title: '', dataset: {}, style: {}, options: [],
                 addEventListener() {},
+                setAttribute() {}, removeAttribute() {},
                 classList: {
                     toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
                     add(name) { classes.add(name); }, remove(name) { classes.delete(name); },

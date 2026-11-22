@@ -41,7 +41,7 @@ async function getSessionLogs(id) {
 }
 
 async function getSessionTimeline(id) {
-    return apiGet(`${API_BASE}/sessions/${id}/timeline`);
+    return apiGet(`${API_BASE}/sessions/${encodeURIComponent(id)}/timeline`);
 }
 
 async function getAnalytics(days = 30) {
